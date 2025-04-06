@@ -1,20 +1,6 @@
-#include <cstdint>
-#include <tuple>
+namespace cudyn::scheduler{
 
-template<typename TaskFunctor>
-class GenericIrregularWrapper{
-
-    private:
-    // TaskFunctor that implements the task that will be executed with dynamic task distribution
-    TaskFunctor f;
-
-    std::tuple kernel_arguments;
-
-    // Kernel function that the actual task scheduling. Argument uint64_t defines the complete number of subtasks required to process the 
-    // whole data supplied for processing by the TaskFunctor f. The argument uint64_t T defines the number of blocks the whole set of subtasks is 
-    // being split by
-    
-    __global__ void generic_irregular_kernel(uint64_t M, uint64_t T, TaskFunctor f){
+    __global__ void generic_irregular_kernel(uint64_t total_tasks, uint64_t count_blocks, TaskFunctor f){
 
         //block wide counter for dynamic task assignment based on the index of the data thats up for processing
         __shared__ uint64_t counter;
@@ -25,12 +11,12 @@ class GenericIrregularWrapper{
 
         // naive task splitting of total task count by the number of blocks used 
         
-        uint64_t max_tasks = M/T;
+        uint64_t block_tasks = total_tasks/count_blocks;
 
         // assigning remaining tasks if M%T != 0 to the first blocks
-        uint64_t additional_task = (blockIdx.x < M%T);
+        uint64_t additional_task = (blockIdx.x < total_tasks%count_blocks);
 
-        max_tasks += additional_task;
+        block_tasks += additional_task;
 
         // Initialization of the inter block synchronization variable 
 
@@ -47,4 +33,5 @@ class GenericIrregularWrapper{
         }
     }
 
-};
+
+}
