@@ -1,5 +1,13 @@
+#include "utils.cuh"
+
 namespace cudyn::scheduler{
 
+    template <typename TaskFunctor>
+    __host__ void launch(KernelConfig, TaskFunctor f){
+
+    }
+
+    template <typename TaskFunctor>
     __global__ void generic_irregular_kernel(uint64_t total_tasks, uint64_t count_blocks, TaskFunctor f){
 
         //block wide counter for dynamic task assignment based on the index of the data thats up for processing
@@ -33,5 +41,4 @@ namespace cudyn::scheduler{
         }
     }
 
-
-}
+    }
