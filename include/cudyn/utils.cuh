@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iostream>
 #include <cassert>
 #include <cuda_runtime.h>
 

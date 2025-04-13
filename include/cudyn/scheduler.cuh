@@ -41,13 +41,13 @@ namespace cudyn::scheduler{
             f(block_start_index+thread_id);
         }
 
-        if(thread_idx.x == 0){
+        if(threadIdx.x == 0){
             counter = min(num_threads, block_tasks);
         }
         __syncthreads();
 
         // Task distribution and frequent update of the intra block synchronization update variable t
-        while(t = atomicAdd((unsigned long long*)&counter, 1) < max_tasks){
+        while(t = atomicAdd((unsigned long long*)&counter, 1) < block_tasks){
             f(block_start_index+t);
         }
     }
