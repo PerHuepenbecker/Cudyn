@@ -28,16 +28,27 @@ namespace cudyn::scheduler{
 
         // Initialization of the inter block synchronization variable 
 
-        uint64_t block_start_index = blockIdx.x * max_tasks + min((unsigned long) blockIdx.x, M % T);
+        uint64_t block_start_index = blockIdx.x * block_tasks + min((unsigned long) blockIdx.x, total_tasks % count_blocks);
 
         // Definition of the variable t which serves for intra block synchronization
-        uint64_t t;
+        uint64_t t = 0;
 
-        //TODO: implement proper initial assignment of tasks to all threads to avoid synchronization issues right from the start
+        // Initial assignment of tasks to all threads to avoid synchronization issues right from the start by running directly into the atomic counter. 
+        uint64_t thread_id = threadIdx.x;
+        uint64_t num_threads = blockDim.x;
+
+        if(thread_id < block_tasks){
+            f(block_start_index+thread_id);
+        }
+
+        if(thread_idx.x == 0){
+            counter = min(num_threads, block_tasks);
+        }
+        __syncthreads();
 
         // Task distribution and frequent update of the intra block synchronization update variable t
         while(t = atomicAdd((unsigned long long*)&counter, 1) < max_tasks){
-            f(i+t);
+            f(block_start_index+t);
         }
     }
 
