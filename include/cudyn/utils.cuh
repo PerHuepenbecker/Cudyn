@@ -1,31 +1,65 @@
 #pragma once
 
+#include <cstdint>
+#include <cassert>
+#include <cuda_runtime.h>
+
 typedef struct {
-    uint64_t total_tasks;
-    uint64_t grid_dimensions;
-    uint64_t block_dimensions;
+    const uint64_t total_tasks;
+    const uint64_t grid_dimensions;
+    const uint64_t block_dimensions;
     
 } KernelConfig;
 
 
-namespace grid_configruation {
-    __host__ KernelConfig manual_grid_configuration(long long total_tasks, int blocks_count, int threads_per_block){
-        KernelConfig config;
-        config.total_tasks = total_tasks;
-        config.grid_dimensions = blocks_count;
-        config.block_dimensions = threads_per_block;
+namespace grid_configuration {
+    namespace details {
 
-        validate_KernelConfig();
-    }
-    
-        // namespace for functions that do not define the public facing API
-        namespace details {
-
-            __host__ constexpr void validate_KernelConfig(KernelConfig config){
-                static_assert(config.total_tasks > 0, "[cudyn bad argument] - The number of total tasks must be greater than 0");
-                static_assert(config.grid_dimensions > 0, "[cudyn bad argument] - The number of blocks must be greater than 0");
-                static_assert(config.block_dimensions > 0, "[cudyn bad argument] - The number of threads per block must be greater than 0");
+        // Validate if the grid configuration is valid and fits within the device limits of the GPU
+        
+        __host__ bool validate_grid_configuration_for_device(KernelConfig config, int device_id){
+            cudaDeviceProp device_properties;
+            cudaError_t error = cudaGetDeviceProperties(&device_properties, device_id);
+            if (error != cudaSuccess) {
+                std::cerr << "[cudyn error] - Failed to get device properties: " << cudaGetErrorString(error) << std::endl;
+                return false;
             }
+            if(config.block_dimensions > device_properties.maxThreadsPerBlock){
+                std::cerr << "[cudyn error] - The number of threads per block exceeds the maximum allowed for the device" << std::endl;
+                return false;
+            }
+            if(config.grid_dimensions > device_properties.maxGridSize[0]){
+                std::cerr << "[cudyn error] - The number of blocks exceeds the maximum allowed for the device" << std::endl;
+                return false;
+            }
+            return true;
         }
+    }
+
+    template <uint64_t TotalTasks, uint64_t BlocksCount, uint64_t ThreadsPerBlock>
+    __host__ constexpr KernelConfig manual_grid_configuration() {
     
+    // Check if the number of total tasks, blocks, and threads per block are greater than 0
+    // This is important to ensure that the kernel can be launched with valid parameters
+    // and to avoid potential runtime errors or undefined behavior
+    // The static_asserts will cause a compile-time error if the conditions are not met
+
+    static_assert(TotalTasks > 0, "[cudyn bad argument] - The number of total tasks must be greater than 0");
+    static_assert(BlocksCount > 0, "[cudyn bad argument] - The number of blocks must be greater than 0");
+    static_assert(ThreadsPerBlock > 0, "[cudyn bad argument] - The number of threads per block must be greater than 0");
+
+    // Check if the number of threads per block is a multiple of 32
+    // This is important for performance reasons, as CUDA architectures are designed to work with warps of 32 threads
+    // and having a number of threads per block that is not a multiple of 32 can lead to underutilization of the GPU
+
+    if(ThreadsPerBlock % 32 != 0){
+        std::cout << "[cudyn warning] - The number of threads per block should be a multiple of 32" << std::endl;
+    }
+
+    KernelConfig config{TotalTasks, BlocksCount, ThreadsPerBlock};
+
+    assert(details::validate_grid_configuration_for_device(config, 0) && "[cudyn error] - The grid configuration is not valid for the device");
+
+    return config;
+}
 }
