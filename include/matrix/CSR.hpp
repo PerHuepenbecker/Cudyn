@@ -120,6 +120,26 @@ class CSRMatrix {
         return Matrix<U>(result, rhs.get_cols_count());
     }
 
+    // Getters for the internal data to get them into gpu memory
+    // Return const references to avoid copying the data 
+    auto & get_data() const {
+        return data; 
+    }
+    auto & get_col_indices() const {
+        return col_indices; 
+    }
+    auto & get_row_ptrs() const {
+        return row_ptrs; 
+    }
+
+    // Getters for the matrix dimensions
+    auto get_rows_count() const {
+        return rows_count; 
+    }
+    auto get_cols_count() const {
+        return cols_count; 
+    }
+
 };
 
 
