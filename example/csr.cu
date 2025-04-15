@@ -68,8 +68,8 @@ int main(){
     std::mt19937 gen(general_seed);
 
     // Confined sparse row example
-    int problem_size = 10;
-    float sparcity = 0.1;
+    int problem_size = 32;
+    float sparcity = 0.7;
     auto csr_matrix = generate_csr_problem(problem_size, sparcity, gen);
     std::cout << "Generated CSR matrix with size: " << problem_size << " and sparcity: " << sparcity << std::endl;
     csr_matrix.display_full();
@@ -133,6 +133,37 @@ int main(){
                                         }
                                     };
 
-                                    
+    // defining the test probem size
+
+    auto block_size = 32;
+    auto grid_size = 1;
+    auto problem_size = csr_matrix.get_rows_count();
+    
+    // launching the kernel
+
+    cudyn::scheduler::generic_irregular_kernel<<<grid_size, block_size>>>(problem_size, grid_size, csr_multiplication_kernel);
+
+    if(cudaGetLastError() != cudaSuccess) {
+        std::cerr << "[cudyn error] - Failed to launch the kernel\n";
+        exit(1); 
+    }
+
+    // copying the result back to host memory
+    cudaMemcpy(result.data(), result_d, problem_size*sizeof(double), cudaMemcpyDeviceToHost);
+    if(cudaGetLastError() != cudaSuccess) {
+        std::cerr << "[cudyn error] - Failed to copy the result back to host memory\n";
+        exit(1);
+    }
+
+    cudaFree(csr_matrix_data_d);
+    cudaFree(csr_matrix_row_ptrs_d);
+    cudaFree(csr_matrix_col_indices_d);
+    cudaFree(multiplication_vector_d);
+    cudaFree(result_d);
+    std::cout << "Result of the multiplication: " << std::endl;
+    for(const auto element: result){
+        std::cout << element << " ";
+    }
+
 
 }
