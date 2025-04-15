@@ -119,11 +119,20 @@ int main(){
                                       csr_matrix_col_indices_d, 
                                       csr_matrix_row_ptrs_d,
                                       multiplication_vector_d,
-                                      result_d
+                                      result_d,
+                                      
                                     ] __device__ (size_t i) {
-
                                         // TODO: Write logic to handle the multiplication
+                                        auto start = csr_matrix_row_ptrs_d[i];
+                                        auto end = csr_matrix_row_ptrs_d[i+1];
 
+                                        for(size_t j = start; j < end; ++j){
+                                            auto col_index = csr_matrix_col_indices_d[j];
+                                            auto value = csr_matrix_data_d[j];
+                                            result_d[i] += value * multiplication_vector_d[col_index];
+                                        }
                                     };
+
+                                    
 
 }
