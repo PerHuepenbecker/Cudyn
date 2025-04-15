@@ -21,8 +21,16 @@ namespace cudyn::scheduler{
         
         uint64_t block_tasks = total_tasks/count_blocks;
 
+        if(threadIdx.x == 0){
+            printf("Block %u: %lu tasks\n", blockIdx.x, block_tasks);
+        }
+
         // assigning remaining tasks if M%T != 0 to the first blocks
         uint64_t additional_task = (blockIdx.x < total_tasks%count_blocks);
+
+        if(threadIdx.x == 0){
+            printf("Block %u: %lu additional tasks\n", blockIdx.x, additional_task);
+        }
 
         block_tasks += additional_task;
 
@@ -46,10 +54,19 @@ namespace cudyn::scheduler{
         }
         __syncthreads();
 
-        // Task distribution and frequent update of the intra block synchronization update variable t
-        while(t = atomicAdd((unsigned long long*)&counter, 1) < block_tasks){
-            f(block_start_index+t);
+        if(threadIdx.x == 0){
+            printf("Starting with remaining tasks %lu\n", block_tasks - counter);
         }
+        
+
+        // Task distribution and frequent update of the intra block synchronization update variable t
+        while(true){
+            t = atomicAdd((unsigned long long*)&counter, 1);
+            if(t >= block_tasks) break;
+            f(block_start_index+t);
+            }
+
+        __syncthreads();
     }
 
-    }
+}

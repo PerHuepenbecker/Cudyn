@@ -120,6 +120,27 @@ class CSRMatrix {
         return Matrix<U>(result, rhs.get_cols_count());
     }
 
+    // Overloaded operator for CsMV multiplication of a csr matrix with a dense vector
+
+    friend std::vector<U> operator*(const CSRMatrix<U>& lhs, const std::vector<U>& rhs){
+
+        if(lhs.cols_count != rhs.size()){
+            throw std::invalid_argument("Incompatible matrix dimensions for multiplication");
+        }
+
+        std::vector<U> result(lhs.rows_count, 0);
+
+        for(size_t i = 0; i < lhs.rows_count; i++){
+
+
+            for(size_t k = lhs.row_ptrs[i]; k < lhs.row_ptrs[i+1]; k++){
+                size_t j = lhs.col_indices[k]; 
+                result[i] += lhs.data[k] * rhs[j];
+            }
+        }
+        return result;
+    }
+
     // Getters for the internal data to get them into gpu memory
     // Return const references to avoid copying the data 
     auto & get_data() const {

@@ -60,19 +60,44 @@ auto generate_multiplication_vector(const CSRMatrix<double>& csr_matrix, std::mt
     return bare_values;
 }
 
-int main(){
-    std::cout << "Starting the example" << std::endl;
+int main(int argc, char** argv) {
+    // argv[1] == problem size
+    // argv[2] == sparcity
+    // argv[3] == grid_dimensions
+    // argv[4] == block_dimensions 
+    if(argc < 5) {
+        std::cerr << "[cudyn error] - Not enough arguments provided" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <problem_size> <sparcity> <grid_dimensions> <block_dimensions>" << std::endl;
+        return 1;
+    }
+
+    int problem_size = std::stoi(argv[1]);
+    float sparcity = std::stof(argv[2]);
+    int grid_size = std::stoi(argv[3]);
+    int block_dimensions = std::stoi(argv[4]);
+    if(problem_size <= 0 || sparcity <= 0 || sparcity > 1) {
+        std::cerr << "[cudyn error] - The problem size and sparcity must be greater than 0 and sparcity must be less than or equal to 1" << std::endl;
+        return 1;
+    }
+
+    std::cout << "Starting the example\n" ;
+    std::cout << "--------------------\n" ;
+    std::cout << "Problem size: " << problem_size << "\n";
+    std::cout << "Sparcity: " << sparcity << "\n";
+    std::cout << "Grid size: " << grid_size << " blocks\n";
+    std::cout << "Threads per block: " << block_dimensions << "\n";
+
 
     // Setup the random number generator with fixed seed for testing accuracy
     auto general_seed = 42;
     std::mt19937 gen(general_seed);
 
     // Confined sparse row example
-    int problem_size = 32;
-    float sparcity = 0.7;
+    //int problem_size = 1024;
+    //float sparcity = 0.7;
     auto csr_matrix = generate_csr_problem(problem_size, sparcity, gen);
     std::cout << "Generated CSR matrix with size: " << problem_size << " and sparcity: " << sparcity << std::endl;
-    csr_matrix.display_full();
+    //csr_matrix.display_full();
 
     // Generate the multiplication vector
 
@@ -99,6 +124,9 @@ int main(){
     cudaMalloc(&multiplication_vector_d, problem_size * sizeof(double));
     cudaMalloc(&result_d, problem_size * sizeof(double));
 
+    // zeroing the device result vector
+    cudaMemset(result_d, 0, problem_size * sizeof(double));
+
     
     if (cudaGetLastError() != cudaSuccess){
         std::cerr << "[cudyn error] - failed to allocate enough memory on device" << std::endl;
@@ -119,9 +147,9 @@ int main(){
                                       csr_matrix_col_indices_d, 
                                       csr_matrix_row_ptrs_d,
                                       multiplication_vector_d,
-                                      result_d,
-                                      
-                                    ] __device__ (size_t i) {
+                                      result_d, problem_size] __device__ (size_t i) {
+                                        //if(i >= problem_size) return;
+
                                         // TODO: Write logic to handle the multiplication
                                         auto start = csr_matrix_row_ptrs_d[i];
                                         auto end = csr_matrix_row_ptrs_d[i+1];
@@ -135,13 +163,11 @@ int main(){
 
     // defining the test probem size
 
-    auto block_size = 32;
-    auto grid_size = 1;
-    auto problem_size = csr_matrix.get_rows_count();
+    //auto grid_size = 2;
     
     // launching the kernel
 
-    cudyn::scheduler::generic_irregular_kernel<<<grid_size, block_size>>>(problem_size, grid_size, csr_multiplication_kernel);
+    cudyn::scheduler::generic_irregular_kernel<<<grid_size, block_dimensions>>>(problem_size, grid_size, csr_multiplication_kernel);
 
     if(cudaGetLastError() != cudaSuccess) {
         std::cerr << "[cudyn error] - Failed to launch the kernel\n";
@@ -160,10 +186,22 @@ int main(){
     cudaFree(csr_matrix_col_indices_d);
     cudaFree(multiplication_vector_d);
     cudaFree(result_d);
-    std::cout << "Result of the multiplication: " << std::endl;
-    for(const auto element: result){
-        std::cout << element << " ";
+    
+
+    std::cout << std::endl;
+    std::cout << "Control run\n";
+
+    auto res = csr_matrix * multiplication_vector;
+    auto counter = 0;
+    for(size_t i = 0; i < problem_size; ++i){
+        if (res[i] - result[i] > 0.0001){
+            std::cout << "Result " << i << " differs: " << res[i] << " != " << result[i] << std::endl;
+            counter++;
+        }
     }
 
+    std::cout << counter << " results differ\n";
+
+    std::cout << std::endl;
 
 }
