@@ -15,6 +15,8 @@
 #include <iostream>
 #include <functional>
 
+#include "../matrix/CSR.hpp"
+
 template<typename T>
 class MatrixMarketCSRParser {
 
@@ -50,6 +52,8 @@ public:
 
     void displayHeaderData();
     void displayCSRArrays();
+    CSRMatrix<T> exportCSRMatrix();
+
 
     MatrixMarketCSRParser(const std::string& filename);
     ~MatrixMarketCSRParser();
@@ -469,6 +473,13 @@ void MatrixMarketCSRParser<T>::displayCSRArrays() {
     std::cout << "\n\n";
 
 }
+
+// Method for exporting the internal CSR data as a proper CSR Matrix
+template <typename T>
+CSRMatrix<T> MatrixMarketCSRParser<T>::exportCSRMatrix(){
+    return CSRMatrix(std::move(csrArrays.data_array), std::move(csrArrays.column_pointers), std::move(csrArrays.row_pointers), header.rows, header.columns);
+}
+
 
 
 
