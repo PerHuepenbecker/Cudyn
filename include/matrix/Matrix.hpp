@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <sstream>
-
+#include <cmath>
 
 template <typename U>
 class Matrix {
