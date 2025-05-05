@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <variant>
 #include <memory>
+#include <vector>
 #include <iostream>
 
 class MatrixMarketCSRParser {

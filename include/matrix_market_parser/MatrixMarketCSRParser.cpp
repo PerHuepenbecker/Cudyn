@@ -82,7 +82,8 @@ void MatrixMarketCSRParser::parseHeader() {
     std::string line;
     std::getline(file, line);
 
-    if(!line.starts_with("%%MatrixMarket")){
+    if(line.substr(0,14) != "%%MatrixMarket"){
+        std::cout << line.substr(0,14) << std::endl;
         throw std::runtime_error("File seems to be malformed. Missing %%MatrixMarket");
     }
 
@@ -235,7 +236,6 @@ bool MatrixMarketCSRParser::parseData() {
     file.clear();
     file.seekg(dataStartPosition);
 
-    int diag_count = 0;
     // Counting the elements per row in the first pass
     while(std::getline(file, line)){
         line_counter++;
@@ -254,9 +254,6 @@ bool MatrixMarketCSRParser::parseData() {
         // Count once if its on the diagonal
 
         if(row == column){
-            diag_count++;
-            std::cout << "Diagonal counter " << diag_count << std::endl;
-            std::cout << "At actual count: " << nonZeroCounter << std::endl;
             nonZeroCounter++;
             rowElementCounter.at(row) ++;
         } else {
