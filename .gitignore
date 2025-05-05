@@ -1,3 +1,5 @@
 build/*
 .vscode/*
 csr_ex
+matrixMarketTest
+example/matrixMarketTest.cpp
