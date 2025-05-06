@@ -31,7 +31,6 @@ namespace MatrixMarketHeaderTypes{
 template<typename T>
 class MatrixMarketCSRParser {
 
-
 public:
 
 
@@ -421,9 +420,15 @@ bool MatrixMarketCSRParser<T>::parseData() {
         return true;
     };
 
-    std::function regular(readRegularData);
-    std::function pattern(readPatternData);
-    std::function reader = (header.dataType == MatrixMarketHeaderTypes::DataType::PATTERN) ? pattern : regular;
+    std::function<bool(std::istringstream&)> regular(readRegularData);
+    std::function<bool(std::istringstream&)> pattern(readPatternData);
+    std::function<bool(std::istringstream&)> reader = (header.dataType == MatrixMarketHeaderTypes::DataType::PATTERN) ? pattern : regular;
+
+    if (header.dataType == MatrixMarketHeaderTypes::DataType::PATTERN) {
+        reader = readPatternData;
+    } else {
+        reader = readRegularData;
+    }
 
     for(size_t i = 0; i < header.nonZeroElements; ++i){
 
@@ -477,7 +482,7 @@ void MatrixMarketCSRParser<T>::displayCSRArrays() {
 // Method for exporting the internal CSR data as a proper CSR Matrix
 template <typename T>
 CSRMatrix<T> MatrixMarketCSRParser<T>::exportCSRMatrix(){
-    return CSRMatrix(std::move(csrArrays.data_array), std::move(csrArrays.column_pointers), std::move(csrArrays.row_pointers), header.rows, header.columns);
+    return CSRMatrix<T>(std::move(csrArrays.data_array), std::move(csrArrays.column_pointers), std::move(csrArrays.row_pointers), header.rows, header.columns);
 }
 
 
