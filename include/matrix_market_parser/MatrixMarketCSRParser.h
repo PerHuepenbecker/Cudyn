@@ -17,23 +17,29 @@
 
 #include "../matrix/CSR.hpp"
 
+namespace MatrixMarketHeaderTypes{
+    enum class ObjectType{MATRIX, VECTOR, UNKNOWN};
+// complex and pattern left out here and will be evaluated as unsupported
+    enum class DataType{INTEGER, REAL, PATTERN,UNSUPPORTED, UNKNOWN};
+    enum class FormatType {COORDINATE, ARRAY, UNKNOWN};
+// Skew symmetric and hermitian left out here for now
+    enum class SymmetryType {GENERAL, SYMMETRIC, UNSUPPORTED, UNKNOWN};
+}
+
+
+
 template<typename T>
 class MatrixMarketCSRParser {
 
+
 public:
 
-    enum class ObjectType{MATRIX, VECTOR, UNKNOWN};
-    // complex and pattern left out here and will be evaluated as unsupported
-    enum class DataType{INTEGER, REAL, PATTERN,UNSUPPORTED, UNKNOWN};
-    enum class FormatType {COORDINATE, ARRAY, UNKNOWN};
-    // Skew symmetric and hermitian left out here
-    enum class SymmetryType {GENERAL, SYMMETRIC, UNSUPPORTED, UNKNOWN};
 
     struct MatrixMarketHeader {
-        ObjectType objectType = ObjectType::UNKNOWN;
-        FormatType formatType = FormatType::UNKNOWN;
-        DataType dataType = DataType::UNKNOWN;
-        SymmetryType symmetryType = SymmetryType::UNKNOWN;
+        MatrixMarketHeaderTypes::ObjectType objectType = MatrixMarketHeaderTypes::ObjectType::UNKNOWN;
+        MatrixMarketHeaderTypes::FormatType formatType = MatrixMarketHeaderTypes::FormatType::UNKNOWN;
+        MatrixMarketHeaderTypes::DataType dataType = MatrixMarketHeaderTypes::DataType::UNKNOWN;
+        MatrixMarketHeaderTypes::SymmetryType symmetryType = MatrixMarketHeaderTypes::SymmetryType::UNKNOWN;
 
         size_t rows = 0;
         size_t columns = 0;
@@ -63,7 +69,7 @@ private:
     std::ifstream file;
     std::streampos dataStartPosition;
 
-    DataType detectedType;
+    MatrixMarketHeaderTypes::DataType detectedType;
     MatrixMarketHeader header;
 
     // Complex variant type for handling of multiple data types here
@@ -82,14 +88,13 @@ private:
     bool parseData();
 
     // Header argument parsing mathods
-    ObjectType parseObjectType(const std::string& objectString);
-    FormatType parseFormatType(const std::string& formatString);
-    DataType parseDataType(const std::string& dataTypeString);
-    SymmetryType parseSymmetryType (const std::string& symmetryTypeString);
+    MatrixMarketHeaderTypes::ObjectType parseObjectType(const std::string& objectString);
+    MatrixMarketHeaderTypes::FormatType parseFormatType(const std::string& formatString);
+    MatrixMarketHeaderTypes::DataType parseDataType(const std::string& dataTypeString);
+    MatrixMarketHeaderTypes::SymmetryType parseSymmetryType (const std::string& symmetryTypeString);
 
     // Helper method for case insensitive header input evaluation
     std::string toLower(std::string str);
-
 
 };
 
@@ -143,24 +148,24 @@ bool MatrixMarketCSRParser<T>::parseHeaderArguments(const std::string& line){
 
 template<typename T>
 bool MatrixMarketCSRParser<T>::validateHeaderArguments(){
-    if(header.objectType == ObjectType::UNKNOWN) {
+    if(header.objectType == MatrixMarketHeaderTypes::ObjectType::UNKNOWN) {
         std::cerr << "[MatrixMarketParser] File contains unknown object type\n";
         return false;
     }
-    if(header.dataType == DataType::UNSUPPORTED || header.dataType == DataType::UNKNOWN){
+    if(header.dataType == MatrixMarketHeaderTypes::DataType::UNSUPPORTED || header.dataType == MatrixMarketHeaderTypes::DataType::UNKNOWN){
         std::cerr << "[MatrixMarketParser] File contains unsupported or unknown data type\n";
         return false;
     }
-    if(header.symmetryType == SymmetryType::UNSUPPORTED || header.symmetryType == SymmetryType::UNKNOWN){
+    if(header.symmetryType == MatrixMarketHeaderTypes::SymmetryType::UNSUPPORTED || header.symmetryType == MatrixMarketHeaderTypes::SymmetryType::UNKNOWN){
         std::cerr << "[MatrixMarketParser] File contains unsupported or unknown symmetry type\n";
         return false;
     }
-    if(header.formatType == FormatType::ARRAY){
+    if(header.formatType == MatrixMarketHeaderTypes::FormatType::ARRAY){
         std::cerr<< "[MatrixMarketParser] Array format currently unsupported.\n";
         return false;
     }
 
-    if(header.formatType == FormatType::UNKNOWN) {
+    if(header.formatType == MatrixMarketHeaderTypes::FormatType::UNKNOWN) {
         std::cerr << "[MatrixMarketParser] File contains invalid format type\n";
         return false;
     }
@@ -209,60 +214,56 @@ std::string MatrixMarketCSRParser<T>::toLower(std::string str){
 }
 
 template<typename T>
-typename MatrixMarketCSRParser<T>::ObjectType
-MatrixMarketCSRParser<T>::parseObjectType(const std::string &objectString) {
+MatrixMarketHeaderTypes::ObjectType MatrixMarketCSRParser<T>::parseObjectType(const std::string &objectString) {
     auto compStr = toLower(objectString);
 
-    if(compStr == "matrix") return ObjectType::MATRIX;
-    if(compStr == "vector") return ObjectType::VECTOR;
-    return ObjectType::UNKNOWN;
+    if(compStr == "matrix") return MatrixMarketHeaderTypes::ObjectType::MATRIX;
+    if(compStr == "vector") return MatrixMarketHeaderTypes::ObjectType::VECTOR;
+    return MatrixMarketHeaderTypes::ObjectType::UNKNOWN;
 }
 
 template<typename T>
-typename MatrixMarketCSRParser<T>::FormatType
-MatrixMarketCSRParser<T>::parseFormatType(const std::string &formatString) {
+MatrixMarketHeaderTypes::FormatType MatrixMarketCSRParser<T>::parseFormatType(const std::string &formatString) {
     auto compStr = toLower(formatString);
 
-    if(compStr == "coordinate") return FormatType::COORDINATE;
-    if(compStr == "array") return FormatType::ARRAY;
-    return FormatType::UNKNOWN;
+    if(compStr == "coordinate") return MatrixMarketHeaderTypes::FormatType::COORDINATE;
+    if(compStr == "array") return MatrixMarketHeaderTypes::FormatType::ARRAY;
+    return MatrixMarketHeaderTypes::FormatType::UNKNOWN;
 
 }
 
 template <typename T>
-typename MatrixMarketCSRParser<T>::DataType
-MatrixMarketCSRParser<T>::parseDataType(const std::string &dataTypeString) {
+MatrixMarketHeaderTypes::DataType MatrixMarketCSRParser<T>::parseDataType(const std::string &dataTypeString) {
     auto compStr = toLower(dataTypeString);
 
-    if(compStr == "real") return DataType::REAL;
-    if(compStr == "integer") return DataType::INTEGER;
-    if(compStr == "pattern") return DataType::PATTERN;
-    if(compStr == "complex") return DataType::UNSUPPORTED;
+    if(compStr == "real") return MatrixMarketHeaderTypes::DataType::REAL;
+    if(compStr == "integer") return MatrixMarketHeaderTypes::DataType::INTEGER;
+    if(compStr == "pattern") return MatrixMarketHeaderTypes::DataType::PATTERN;
+    if(compStr == "complex") return MatrixMarketHeaderTypes::DataType::UNSUPPORTED;
 
-    return DataType::UNKNOWN;
+    return MatrixMarketHeaderTypes::DataType::UNKNOWN;
 
 }
 
 template <typename T>
-typename MatrixMarketCSRParser<T>::SymmetryType
-MatrixMarketCSRParser<T>::parseSymmetryType(const std::string &symmetryTypeString) {
+MatrixMarketHeaderTypes::SymmetryType MatrixMarketCSRParser<T>::parseSymmetryType(const std::string &symmetryTypeString) {
     auto compStr = toLower(symmetryTypeString);
 
-    if(compStr == "general") return SymmetryType::GENERAL;
-    if(compStr == "symmetric") return SymmetryType::SYMMETRIC;
-    if(compStr == "hermetian" || compStr == "skew-symmetric") return SymmetryType::UNSUPPORTED;
-    return SymmetryType::UNKNOWN;
+    if(compStr == "general") return MatrixMarketHeaderTypes::SymmetryType::GENERAL;
+    if(compStr == "symmetric") return MatrixMarketHeaderTypes::SymmetryType::SYMMETRIC;
+    if(compStr == "hermetian" || compStr == "skew-symmetric") return MatrixMarketHeaderTypes::SymmetryType::UNSUPPORTED;
+    return MatrixMarketHeaderTypes::SymmetryType::UNKNOWN;
 }
 
 template <typename T>
 bool MatrixMarketCSRParser<T>::parseSizeArguments(const std::string &line) {
     std::istringstream iss(line);
 
-    if(header.formatType == FormatType::COORDINATE){
+    if(header.formatType == MatrixMarketHeaderTypes::FormatType::COORDINATE){
         if(!(iss >> header.rows >> header.columns >> header.nonZeroElements)){
             return false;
         }
-    } else if(header.formatType == FormatType::ARRAY){
+    } else if(header.formatType == MatrixMarketHeaderTypes::FormatType::ARRAY){
         if(!(iss >> header.rows >> header.columns)){
             return false;
         }
@@ -281,7 +282,7 @@ MatrixMarketCSRParser<T>::~MatrixMarketCSRParser() {
 template<typename T>
 void MatrixMarketCSRParser<T>::displayHeaderData() {
     switch (header.objectType) {
-        case ObjectType::MATRIX:
+        case MatrixMarketHeaderTypes::ObjectType::MATRIX:
             std::cout << "Matrix\n";
             break;
         default:
@@ -289,7 +290,7 @@ void MatrixMarketCSRParser<T>::displayHeaderData() {
     }
     std::cout << "Format: ";
     switch(header.formatType){
-        case FormatType::COORDINATE:
+        case MatrixMarketHeaderTypes::FormatType::COORDINATE:
             std::cout << "coordinate\n";
             break;
         default:
@@ -298,7 +299,7 @@ void MatrixMarketCSRParser<T>::displayHeaderData() {
     }
     std::cout << "Symmetry type: ";
     switch(header.symmetryType){
-        case SymmetryType::GENERAL:
+        case MatrixMarketHeaderTypes::SymmetryType::GENERAL:
             std::cout<< "general\n";
             break;
         default:
@@ -307,10 +308,10 @@ void MatrixMarketCSRParser<T>::displayHeaderData() {
 
     std::cout << "Data type: ";
     switch(header.dataType){
-        case DataType::REAL:
+        case MatrixMarketHeaderTypes::DataType::REAL:
             std::cout << "float\n";
             break;
-        case DataType::INTEGER:
+        case MatrixMarketHeaderTypes::DataType::INTEGER:
             std::cout << "integer\n";
             break;
         default:
@@ -364,7 +365,7 @@ bool MatrixMarketCSRParser<T>::parseData() {
         } else {
             nonZeroCounter++;
             rowElementCounter.at(row) ++;
-            if(header.symmetryType == SymmetryType::SYMMETRIC){
+            if(header.symmetryType == MatrixMarketHeaderTypes::SymmetryType::SYMMETRIC){
                 nonZeroCounter++;
                 rowElementCounter.at(column)++;
             }
@@ -374,7 +375,7 @@ bool MatrixMarketCSRParser<T>::parseData() {
     header.unfoldedNonZeroElements = nonZeroCounter;
 
     // Checking if the number of declared rows match up with the number of read rows form the file
-    if(nonZeroCounter != header.nonZeroElements && header.symmetryType == SymmetryType::GENERAL){
+    if(nonZeroCounter != header.nonZeroElements && header.symmetryType == MatrixMarketHeaderTypes::SymmetryType::GENERAL){
         std::stringstream ss;
         ss << "[MatrixMarketParser] Header declared number of non zeros and processed non zero elements don't add up.\n";
         ss << "                     Counted: " << nonZeroCounter << " | Declared: " << header.nonZeroElements << "\n";
@@ -422,7 +423,7 @@ bool MatrixMarketCSRParser<T>::parseData() {
 
     std::function regular(readRegularData);
     std::function pattern(readPatternData);
-    std::function reader = (header.dataType == DataType::PATTERN) ? pattern : regular;
+    std::function reader = (header.dataType == MatrixMarketHeaderTypes::DataType::PATTERN) ? pattern : regular;
 
     for(size_t i = 0; i < header.nonZeroElements; ++i){
 
@@ -440,7 +441,7 @@ bool MatrixMarketCSRParser<T>::parseData() {
         insertionPointers.at(row)++;
 
         //Handle possible symmetry
-        if(row != column && header.symmetryType != SymmetryType::GENERAL){
+        if(row != column && header.symmetryType != MatrixMarketHeaderTypes::SymmetryType::GENERAL){
             auto insertion_index_symmetric = insertionPointers.at(column);
             csrArrays.data_array.at(insertion_index_symmetric) = value;
             csrArrays.column_pointers.at(insertion_index_symmetric) = row;
@@ -471,7 +472,6 @@ void MatrixMarketCSRParser<T>::displayCSRArrays() {
         std::cout << el << " ";
     }
     std::cout << "\n\n";
-
 }
 
 // Method for exporting the internal CSR data as a proper CSR Matrix
@@ -481,7 +481,48 @@ CSRMatrix<T> MatrixMarketCSRParser<T>::exportCSRMatrix(){
 }
 
 
+namespace MatrixMarketCSRParserBase{
 
+        // Helper function to determine the correct template instantiation while using the parser
+        // Code and minor logic duplication is accepted in contrast to way more complex handling
+        // if using other approaches to allow some runtime flexibility
+
+        auto peekHeader(const std::string& filename){
+            std::ifstream file;
+            file.open(filename);
+            if(!file.is_open()){
+                std::stringstream ss;
+                ss << "[PeekHeader] Could not open file: " << filename;
+                throw std::runtime_error(ss.str());
+            }
+
+            std::string line;
+            std::getline(file, line);
+
+            if(line.substr(0,14) != "%%MatrixMarket"){
+                throw std::runtime_error("File seems to be malformed. Missing %%MatrixMarket");
+            }
+
+            // Parsing the header arguments
+
+            std::istringstream iss(line.substr(14));
+            std::string dataTypeString;
+
+            if(!(iss >> dataTypeString))
+                return MatrixMarketHeaderTypes::DataType::UNKNOWN;
+            if(!(iss >> dataTypeString))
+                return MatrixMarketHeaderTypes::DataType::UNKNOWN;
+            if(!(iss >> dataTypeString))
+                return MatrixMarketHeaderTypes::DataType::UNKNOWN;
+
+            MatrixMarketHeaderTypes::DataType type = MatrixMarketHeaderTypes::DataType::UNKNOWN;
+
+            if(dataTypeString == "real") type = MatrixMarketHeaderTypes::DataType::REAL;
+            // Since pattern also can use internal integer
+            if(dataTypeString == "integer" || dataTypeString == "pattern") type = MatrixMarketHeaderTypes::DataType::INTEGER;
+            return type;
+        }
+}
 
 
 #endif //MATRIXMARKETPARSER_MATRIXMARKETCSRPARSER_H
