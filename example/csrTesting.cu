@@ -12,7 +12,7 @@
 
 
 template <typename T>
-std::vector<T> generate_basic_multiplication_vector(size_t problem_size, T baseValue = 1, bool random = false, int seed = 42, T lower_bound = 0, T upper_bound = 2 << 20){
+std::vector<T> generate_multiplication_vector(size_t problem_size, T baseValue = 1, bool random = false, int seed = 42, T lower_bound = 0, T upper_bound = 2 << 20){
     std::vector<T> result (problem_size);
     if(!random){
         std::fill(result.begin(), result.end(), baseValue);
@@ -35,6 +35,44 @@ std::vector<T> generate_basic_multiplication_vector(size_t problem_size, T baseV
 
     return result;
 }
+
+template <typename T>
+struct DeviceDataCSR {
+    T* csr_matrix_data_d = nullptr;
+    size_t* csr_matrix_row_ptrs_d = nullptr;
+    size_t* csr_matrix_col_indices_d = nullptr;
+    size_t rows = 0;
+    size_t columns = 0;
+
+    DeviceDataCSR(const CSRMatrix<T>& csrMatrix);
+};
+
+template <typename T>
+DeviceDataCSR<T>::DeviceDataCSR(const CSRMatrix<T>& csrMatrix){
+    auto data = csrMatrix.get_data();
+    auto column_pointers = csrMatrix.get_col_indices();
+    auto row_pointers = csrMatrix.get_row_ptrs();
+
+    cudaMalloc(&csr_matrix_data_d, data.size() * sizeof(T));
+    cudaMalloc(&csr_matrix_col_indices_d, column_pointers.size() * sizeof(size_t));
+    cudaMalloc(&csr_matrix_row_ptrs_d, row_pointers.size() * sizeof(size_t));
+    
+}
+
+template<typename T>
+struct DeviceDataSpMV{
+    DeviceDataCSR<T> csrData;
+    T* multiplicationVector = nullptr;
+    T* result = nullptr;
+};
+
+template<typename T>
+void allocateDeviceMemory(DeviceDataSpMV<T> deviceData){
+
+}
+
+template<typename T>
+void prepareCSRDeviceArrays(){}
     
 
 
@@ -51,7 +89,29 @@ int main(int argc, char** argv) {
 
     auto fileDataType = MatrixMarketCSRParserBase::peekHeader(filename);
 
-    auto vec = generate_basic_multiplication_vector<int>(10)
+
+
+    if(fileDataType == MatrixMarketHeaderTypes::DataType::REAL){
+
+        MatrixMarketCSRParser<double> parser(filename);
+        auto csr_matrix = parser.exportCSRMatrix();
+        auto multiplicationVector = generate_multiplication_vector<double>(csr_matrix.get_rows_count());
+
+
+
+
+
+
+    } else if (fileDataType == MatrixMarketHeaderTypes::DataType::INTEGER || fileDataType == MatrixMarketHeaderTypes::DataType::PATTERN){
+        
+        MatrixMarketCSRParser<int> parser(filename);
+        auto csr_matrix = parser.exportCSRMatrix();
+        auto multiplicationVector = generate_multiplication_vector<int>(csr_matrix.get_rows_count());
+
+
+        }
+    
+    
 
 
 
