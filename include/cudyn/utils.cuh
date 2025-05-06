@@ -13,6 +13,12 @@ typedef struct {
 } KernelConfig;
 
 namespace utils {
+
+    void errorCheck(){
+        if (cudaGetLastError() != cudaSuccess) {
+            throw std::runtime_error("[CudaDevicePointer] Allocation failed");
+        }
+    }
     
     // Wrapper for safe RAII handling of memory via smart pointer inspired approach
     template <typename T>
@@ -21,12 +27,6 @@ namespace utils {
         private:
             // Templated private internal pointer that is wrapped in RAII logic
             T* pointer_ = nullptr;
-
-            void errorCheck(){
-                if (cudaGetLastError() != cudaSuccess) {
-                    throw std::runtime_error("[CudaDevicePointer] Allocation failed");
-                }
-            }
         
         public:
             CudaDevicePointer() = default;
