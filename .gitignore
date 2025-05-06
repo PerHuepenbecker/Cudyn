@@ -3,3 +3,5 @@ build/*
 csr_ex
 matrixMarketTest
 example/matrixMarketTest.cpp
+example/memoryTesting.cu
+MemoryTesting
