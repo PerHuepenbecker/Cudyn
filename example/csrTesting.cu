@@ -10,17 +10,23 @@
 #include <vector>
 #include <limits>
 
+template <typename T>
+std::vector<T> generate_multiplication_vector(size_t problem_size, double sparcity){
 
+}
 
 int main(int argc, char** argv) {
-    if(argc <= 2){
+    if(argc != 2){
         std::cerr << "Missing argument: filename" << std::endl;
         std::cerr << "Usage: <program name> <filename>" << std::endl;
         std::cerr << "Exiting.." << std::endl;
         exit(1);
     }    
-    
 
+    // Extracting the filename from program arguments
     std::string filename = argv[1];
+
+    auto fileDataType = MatrixMarketCSRParserBase::peekHeader(filename);
+
 
 }
