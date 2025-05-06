@@ -12,6 +12,67 @@ typedef struct {
     
 } KernelConfig;
 
+namespace utils {
+    
+    // Wrapper for safe RAII handling of memory via smart pointer inspired approach
+    template <typename T>
+    class CudaDevicePointer {
+        
+        private:
+            // Templated private internal pointer that is wrapped in RAII logic
+            T* pointer_ = nullptr;
+
+            void errorCheck(){
+                if (cudaGetLastError() != cudaSuccess) {
+                    throw std::runtime_error("[CudaDevicePointer] Allocation failed");
+                }
+            }
+        
+        public:
+            CudaDevicePointer() = default;
+            explicit CudaDevicePointer(size_t count){
+                allocateMemory(count);
+            }
+            // Automatic handling of memory deallocation on destructor call
+            ~CudaDevicePointer(){free();}
+
+            // Make the pointer non copyable by explicitly deleting the copy and copy assignment operators
+            CudaDevicePointer(const CudaDevicePointer&) = delete;
+            CudaDevicePointer& operator=(const CudaDevicePointer&) = delete;
+
+            // Allow move by defining move and move assignment operaors
+            CudaDevicePointer(const CudaDevicePointer&& other) noexcept {
+                pointer_ = other.pointer_;
+                other.pointer_ = nullptr;
+            }
+
+            CudaDevicePointer& operator=(CudaDevicePointer&& other) noexcept {
+                if(this != &other) {
+                    free();
+                    pointer_ = other.pointer_;
+                    other.pointer_= nullptr;
+                }
+                return *this;
+            }
+
+            void allocateMemory(size_t count){
+                free();
+                cudaMalloc((void**)&pointer_, sizeof(T) * count);
+                errorCheck();
+            }
+
+            void free(){
+                if(pointer_){
+                    cudaFree(pointer_);
+                    pointer_ = nullptr;
+                }
+            }
+
+            T* get() const {return pointer_;}
+
+            operator T*() const {return pointer_;}
+    };
+}
 
 namespace grid_configuration {
     namespace details {
