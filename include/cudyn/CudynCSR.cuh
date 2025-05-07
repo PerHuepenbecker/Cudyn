@@ -42,9 +42,9 @@ namespace CudynCSR {
         template <typename T>
         struct DeviceDataCSR {
 
-            utils::CudaDevicePointer<T> csrMatrixData_d;
-            utils::CudaDevicePointer<size_t> csrMatrixRowPtrs_d;
-            utils::CudaDevicePointer<size_t> csrMatrixColIndices_d;
+            Utils::CudaDevicePointer<T> csrMatrixData_d;
+            Utils::CudaDevicePointer<size_t> csrMatrixRowPtrs_d;
+            Utils::CudaDevicePointer<size_t> csrMatrixColIndices_d;
             size_t rows = 0;
             size_t columns = 0;
             
@@ -66,7 +66,7 @@ namespace CudynCSR {
                 cudaMemcpy(csrMatrixColIndices_d, column_pointers.data(), column_pointers.size() * sizeof(size_t), cudaMemcpyHostToDevice);
 
 
-                utils::errorCheck();  
+                Utils::errorCheck();  
             };
         };
         
@@ -74,8 +74,8 @@ namespace CudynCSR {
         struct DeviceDataSpMV{
 
             DeviceDataCSR<T> csrData;
-            utils::CudaDevicePointer<T> multiplicationVector;
-            utils::CudaDevicePointer<T> result;
+            Utils::CudaDevicePointer<T> multiplicationVector;
+            Utils::CudaDevicePointer<T> result;
 
             DeviceDataSpMV(const CSRMatrix<T>& csrMatrix, std::vector<T> multVec)
                 :csrData(csrMatrix)
@@ -88,7 +88,7 @@ namespace CudynCSR {
                 multiplicationVector.allocateMemory(multVec.size(), false);
                 result.allocateMemory(multVec.size());
                 
-                utils::errorCheck();
+                Utils::errorCheck();
 
                 cudaMemcpy(multiplicationVector, multVec.data(), sizeof(T)*multVec.size(), cudaMemcpyHostToDevice);
             };
@@ -123,17 +123,20 @@ namespace CudynCSR {
             __device__ void operator()(size_t i) const {
                 size_t row_start_offset = rowPointers_d[i];
                 size_t row_end_offset = rowPointers_d[i+1];
+                
+                T dotProduct = 0;
 
                 for (size_t j = row_start_offset; j < row_end_offset; ++j) {
                     size_t col_index = columnIndices_d[j]; 
                     T value = data_d[j];                 
         
-                    printf("Value: %lf\n", value);
-                    printf("Multvec: %lf\n", multiplicationVector_d[col_index]);
+                    //printf("Value: %lf\n", value);
+                    //printf("Multvec: %lf\n", multiplicationVector_d[col_index]);
 
-                    resultVector_d[i] += value * multiplicationVector_d[col_index];
-                    
+                    dotProduct += value * multiplicationVector_d[col_index];
                 }
+
+                resultVector_d[i] = dotProduct;
                 
             }
         };
