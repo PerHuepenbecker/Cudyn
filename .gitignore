@@ -5,3 +5,6 @@ matrixMarketTest
 example/matrixMarketTest.cpp
 example/memoryTesting.cu
 MemoryTesting
+memoryTesting
+memoryTesting.cu
+
