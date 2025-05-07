@@ -5,14 +5,7 @@
 #include <cassert>
 #include <cuda_runtime.h>
 
-typedef struct {
-    const uint64_t total_tasks;
-    const uint64_t grid_dimensions;
-    const uint64_t block_dimensions;
-    
-} KernelConfig;
-
-namespace utils {
+namespace Utils {
 
     void errorCheck(){
         if (cudaGetLastError() != cudaSuccess) {
@@ -77,14 +70,25 @@ namespace utils {
     };
 }
 
-namespace grid_configuration {
-    namespace details {
+namespace GridConfiguration {
+
+
+    typedef struct {
+
+        const size_t total_tasks;
+        const size_t grid_dimensions;
+        const size_t block_dimensions;
+
+    } KernelConfig;
+
+
+    namespace Details {
 
         // Validate if the grid configuration is valid and fits within the device limits of the GPU
         
-        __host__ bool validate_grid_configuration_for_device(KernelConfig config, int device_id){
+        __host__ bool validatGridConfigurationForDevice(KernelConfig config, int deviceId){
             cudaDeviceProp device_properties;
-            cudaError_t error = cudaGetDeviceProperties(&device_properties, device_id);
+            cudaError_t error = cudaGetDeviceProperties(&device_properties, deviceId);
             if (error != cudaSuccess) {
                 std::cerr << "[cudyn error] - Failed to get device properties: " << cudaGetErrorString(error) << std::endl;
                 return false;
@@ -102,7 +106,7 @@ namespace grid_configuration {
     }
 
     template <uint64_t TotalTasks, uint64_t BlocksCount, uint64_t ThreadsPerBlock>
-    __host__ constexpr KernelConfig manual_grid_configuration() {
+    __host__ constexpr KernelConfig ManualConfigurationCheck(int deviceId = 0) {
     
     // Check if the number of total tasks, blocks, and threads per block are greater than 0
     // This is important to ensure that the kernel can be launched with valid parameters
@@ -123,7 +127,9 @@ namespace grid_configuration {
 
     KernelConfig config{TotalTasks, BlocksCount, ThreadsPerBlock};
 
-    assert(details::validate_grid_configuration_for_device(config, 0) && "[cudyn error] - The grid configuration is not valid for the device");
+    if(!Details::validatGridConfigurationForDevice(config, deviceId)){
+
+    }
 
     return config;
 }
