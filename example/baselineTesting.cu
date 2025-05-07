@@ -46,7 +46,22 @@ auto lauchSpMVKernel(CudynCSR::Datastructures::DeviceDataSpMV<T>& deviceData, si
     auto rows = deviceData.csrData.rows;
 
     if(numBlocks * threadsPerBlock >= rows){
+
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+
+        cudaEventRecord(start);
+
         SpMVKernel<<<numBlocks, threadsPerBlock>>>(data, columnIndices, rowPointers, multiplicationVector, resultVector, rows);
+
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+
+        std::cout << "Kernel execution time: " << milliseconds << "ms" << std::endl;
+
     } else {
         std::cerr << "Warning: Number of threads are not enough" << std::endl;
     }
@@ -110,5 +125,5 @@ int main(int argc, char** argv){
         std::cout << "Cuda Success!" << std::endl;
         std::cout << "Output vector dimensions: " << deviceData.getResult().size() << std::endl;        
     }
-
+    
 }
