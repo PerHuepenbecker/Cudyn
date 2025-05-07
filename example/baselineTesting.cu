@@ -67,7 +67,7 @@ auto lauchSpMVKernel(CudynCSR::Datastructures::DeviceDataSpMV<T>& deviceData, si
     }
 
 
-    utils::errorCheck();
+    Utils::errorCheck();
 }
 
 
@@ -100,16 +100,26 @@ int main(int argc, char** argv){
 
         MatrixMarketCSRParser<double> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count());
+        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count(), 1, true);
 
         CudynCSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
 
         lauchSpMVKernel<double>(deviceData, numBlocks, threadsPerBlock);
 
-        utils::errorCheck();
+        Utils::errorCheck();
         
         std::cout << "Cuda Success!" << std::endl;
-        std::cout << "Output vector dimensions: " << deviceData.getResult().size() << std::endl;
+
+        auto result = deviceData.getResult();
+        size_t zeroCount = 0;
+        for(const auto& el :result){
+            if (el==0){
+                zeroCount++;
+            } 
+        }
+
+        std::cout << "Output vector dimensions: " << result.size() << std::endl;        
+        std::cout << "Contains " << zeroCount << " zeros" << std::endl;
 
     } else if (fileDataType == MatrixMarketHeaderTypes::DataType::INTEGER || fileDataType == MatrixMarketHeaderTypes::DataType::PATTERN){
         
@@ -120,10 +130,19 @@ int main(int argc, char** argv){
         CudynCSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
         lauchSpMVKernel<int>(deviceData, numBlocks, threadsPerBlock);
 
-        utils::errorCheck();
+        Utils::errorCheck();
 
         std::cout << "Cuda Success!" << std::endl;
-        std::cout << "Output vector dimensions: " << deviceData.getResult().size() << std::endl;        
+        auto result = deviceData.getResult();
+        size_t zeroCount = 0;
+        for(const auto& el :result){
+            if (el==0){
+                zeroCount++;
+            } 
+        }
+
+        std::cout << "Output vector dimensions: " << result.size() << std::endl;        
+        std::cout << "Contains " << zeroCount << " zeros" << std::endl;
     }
-    
+
 }
