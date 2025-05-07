@@ -8,4 +8,5 @@ MemoryTesting
 memoryTesting
 memoryTesting.cu
 baselineTesting
-
+dynamicTesting
+randomizedTesting
