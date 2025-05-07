@@ -55,10 +55,13 @@ namespace utils {
                 return *this;
             }
 
-            void allocateMemory(size_t count){
+            void allocateMemory(size_t count, bool zero = true){
                 free();
                 cudaMalloc((void**)&pointer_, sizeof(T) * count);
                 errorCheck();
+                if(zero){
+                    cudaMemset(pointer_, 0, count);
+                }
             }
 
             void free(){
