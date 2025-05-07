@@ -35,8 +35,8 @@ int main(int argc, char** argv) {
     auto getKernelType = [&kernelTypeStr](){
         if(kernelTypeStr == "less-atomic"){
             return Cudyn::Scheduler::KernelType::REDUCED_ATOMICS;
-        } else if(kernelTypeStr == "fetch2") {
-            return Cudyn::Scheduler::KernelType::FETCH2;
+        } else if(kernelTypeStr == "batch") {
+            return Cudyn::Scheduler::KernelType::BATCH;
         } else return Cudyn::Scheduler::KernelType::STANDARD;
     };
 
