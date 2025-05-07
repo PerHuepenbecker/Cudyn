@@ -1,6 +1,6 @@
 #include "utils.cuh"
 
-namespace cudyn::scheduler{
+namespace Cudyn::Scheduler{
 
     template <typename TaskFunctor>
     __host__ void launch(KernelConfig, TaskFunctor f){
