@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace CudynCSR {
+namespace Cudyn::CSR {
     namespace Helpers {
 
         template<typename T>
