@@ -56,7 +56,16 @@ int main(int argc, char** argv) {
 
         GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 
-        Cudyn::Launcher::launch(config, SpMVKernel, kernelType);
+        switch(kernelType){
+                case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
+                    Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
+                    break;
+                } default: {
+                    Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
+                }
+            
+        }
+        Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
 
         Utils::errorCheck();
         
@@ -76,7 +85,14 @@ int main(int argc, char** argv) {
 
         GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 
-        Cudyn::Launcher::launch(config, SpMVKernel, kernelType);
+        switch(kernelType){
+            case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
+                Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
+                break;
+            } default: {
+                Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
+            }
+        }
 
         Utils::errorCheck();
         
