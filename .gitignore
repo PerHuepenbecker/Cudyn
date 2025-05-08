@@ -10,3 +10,5 @@ memoryTesting.cu
 baselineTesting
 dynamicTesting
 randomizedTesting
+
+highlyIrregularTesting
