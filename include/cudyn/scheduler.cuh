@@ -8,23 +8,7 @@
 namespace Cudyn::Scheduler{
 
 
-    struct StandardScheduler {
-        template <typename Functor>
-        static void launch(GridConfiguration::KernelConfig config, Functor f) {
-            genericIrregularKernel<<<config.grid_dimensions, config.block_dimensions>>>(
-                config.total_tasks, config.grid_dimensions, f);
-        }
-    };
-
-
-    struct ReducedAtomicScheduler {
-        template <typename Functor>
-        static void launch(GridConfiguration::KernelConfig config, Functor f) {
-            genericIrregularKernelLowAtomics<<<config.grid_dimensions, config.block_dimensions>>>(
-                config.total_tasks, config.grid_dimensions, f);
-        }
-    };
-
+   
 
     enum class KernelType{STANDARD, REDUCED_ATOMICS, BATCH};
 
@@ -133,6 +117,25 @@ namespace Cudyn::Scheduler{
 
         __syncthreads();
     }
+
+
+    struct StandardScheduler {
+        template <typename Functor>
+        static void launch(GridConfiguration::KernelConfig config, Functor f) {
+            genericIrregularKernel<<<config.grid_dimensions, config.block_dimensions>>>(
+                config.total_tasks, config.grid_dimensions, f);
+        }
+    };
+
+
+    struct ReducedAtomicScheduler {
+        template <typename Functor>
+        static void launch(GridConfiguration::KernelConfig config, Functor f) {
+            genericIrregularKernelLowAtomics<<<config.grid_dimensions, config.block_dimensions>>>(
+                config.total_tasks, config.grid_dimensions, f);
+        }
+    };
+
 };
 
 namespace Cudyn::Launcher{
@@ -194,22 +197,7 @@ namespace Cudyn::Launcher{
             std::cout << "Dynamic Kernel execution time Standard: " << milliseconds << "ms" << std::endl;
 
 
-        } else if(type == Scheduler::KernelType::BATCH){
-
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
-            cudaEventRecord(start); 
-
-            Scheduler::genericIrregularKernelBatch<<<kernelConfig.grid_dimensions, kernelConfig.block_dimensions>>>(kernelConfig.total_tasks,kernelConfig.grid_dimensions, f);  
-
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            float milliseconds = 0;
-            cudaEventElapsedTime(&milliseconds, start, stop);
-            std::cout << "Batched Kernel execution time: " << milliseconds << "ms" << std::endl;
-        }
-        
-        else {
+        } else {
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
 
@@ -224,7 +212,6 @@ namespace Cudyn::Launcher{
             std::cout << "Dynamic Kernel execution time reduced Atomics: " << milliseconds << "ms" << std::endl;
 
         }
-        
         
 
     }
