@@ -48,11 +48,11 @@ int main(int argc, char** argv) {
 
         MatrixMarketCSRParser<double> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count());
+        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count());
 
-        CudynCSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
+        Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
 
-        CudynCSR::Kernel::CudynCSRSpMV<double> SpMVKernel(deviceData);
+        Cudyn::CSR::Kernel::CudynCSRSpMV<double> SpMVKernel(deviceData);
 
         GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 
@@ -77,11 +77,11 @@ int main(int argc, char** argv) {
         
         MatrixMarketCSRParser<int> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<int>(csr_matrix.get_rows_count());
+        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<int>(csr_matrix.get_rows_count());
 
-        CudynCSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
+        Cudyn::CSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
 
-        CudynCSR::Kernel::CudynCSRSpMV<int> SpMVKernel(deviceData);
+        Cudyn::CSR::Kernel::CudynCSRSpMV<int> SpMVKernel(deviceData);
 
         GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 

@@ -36,7 +36,7 @@ __global__ void SpMVKernel(
 }
 
 template <typename T>
-auto lauchSpMVKernel(CudynCSR::Datastructures::DeviceDataSpMV<T>& deviceData, size_t numBlocks, size_t threadsPerBlock){
+auto lauchSpMVKernel(Cudyn::CSR::Datastructures::DeviceDataSpMV<T>& deviceData, size_t numBlocks, size_t threadsPerBlock){
     auto data = deviceData.csrData.csrMatrixData_d.get();
     auto columnIndices = deviceData.csrData.csrMatrixColIndices_d.get();
     auto rowPointers = deviceData.csrData.csrMatrixRowPtrs_d.get();
@@ -148,17 +148,17 @@ int main(int argc, char** argv) {
     auto csrMatrix = generateCSRProblem<double>(problemSize, sparcity, gen);
 
 
-    auto multVec = CudynCSR::Helpers::generate_multiplication_vector<double>(problemSize);
+    auto multVec = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(problemSize);
 
-    CudynCSR::Datastructures::DeviceDataSpMV<double> deviceData (csrMatrix, multVec);
+    Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData (csrMatrix, multVec);
 
     auto kernelConfig = GridConfiguration::KernelConfig{.total_tasks = problemSize, .grid_dimensions = gridSize, .block_dimensions = blockDimensions};
 
     if(kernelType == "dynamic" || kernelType == "dual") {
         std::cout << "Launching dynamic Kernel" << std::endl;
-        CudynCSR::Kernel::CudynCSRSpMV<double> dynamicKernelLogic (deviceData);
+        Cudyn::CSR::Kernel::CudynCSRSpMV<double> dynamicKernelLogic (deviceData);
 
-        Cudyn::Launcher::launch(kernelConfig, dynamicKernelLogic);
+        Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(kernelConfig, dynamicKernelLogic);
         Utils::errorCheck();
 
         auto result = deviceData.getResult();
