@@ -208,7 +208,7 @@ namespace Cudyn::Launcher{
             std::cout << "Dynamic Kernel execution time Standard: " << milliseconds << "ms" << std::endl;
 
 
-        } else if(type == Scheduler::KernelType::FETCH2){
+        } else if(type == Scheduler::KernelType::BATCH){
 
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
@@ -220,7 +220,7 @@ namespace Cudyn::Launcher{
             cudaEventSynchronize(stop);
             float milliseconds = 0;
             cudaEventElapsedTime(&milliseconds, start, stop);
-            std::cout << "Fetch2 Kernel execution time: " << milliseconds << "ms" << std::endl;
+            std::cout << "Batched Kernel execution time: " << milliseconds << "ms" << std::endl;
         }
         
         else {
