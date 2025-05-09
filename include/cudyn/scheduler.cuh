@@ -85,12 +85,6 @@ namespace Cudyn::Scheduler{
         // Compute the starting index for this block
         uint64_t block_start_index = blockIdx.x * base_tasks + min((uint64_t)blockIdx.x, remainder);
 
-        //block_tasks += additional_task;
-
-        // Initialization of the inter block synchronization variable 
-
-        //uint64_t block_start_index = blockIdx.x * block_tasks + min((unsigned long) blockIdx.x, total_tasks % count_blocks);
-
         // Definition of the variable t which serves for intra block synchronization
         uint64_t t = 0;
 
