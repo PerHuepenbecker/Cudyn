@@ -42,9 +42,9 @@ namespace Cudyn::CSR {
         template <typename T>
         struct DeviceDataCSR {
 
-            Utils::CudaDevicePointer<T> csrMatrixData_d;
-            Utils::CudaDevicePointer<size_t> csrMatrixRowPtrs_d;
-            Utils::CudaDevicePointer<size_t> csrMatrixColIndices_d;
+            Cudyn::Utils::Memory::CudaDevicePointer<T> csrMatrixData_d;
+            Cudyn::Utils::Memory::CudaDevicePointer<size_t> csrMatrixRowPtrs_d;
+            Cudyn::Utils::Memory::CudaDevicePointer<size_t> csrMatrixColIndices_d;
             size_t rows = 0;
             size_t columns = 0;
             
@@ -74,8 +74,8 @@ namespace Cudyn::CSR {
         struct DeviceDataSpMV{
 
             DeviceDataCSR<T> csrData;
-            Utils::CudaDevicePointer<T> multiplicationVector;
-            Utils::CudaDevicePointer<T> result;
+            Cudyn::Utils::Memory::CudaDevicePointer<T> multiplicationVector;
+            Cudyn::Utils::Memory::CudaDevicePointer<T> result;
 
             DeviceDataSpMV(const CSRMatrix<T>& csrMatrix, std::vector<T> multVec)
                 :csrData(csrMatrix)
@@ -88,7 +88,7 @@ namespace Cudyn::CSR {
                 multiplicationVector.allocateMemory(multVec.size(), false);
                 result.allocateMemory(multVec.size());
                 
-                Utils::errorCheck();
+                Cudyn::Utils::errorCheck();
 
                 cudaMemcpy(multiplicationVector, multVec.data(), sizeof(T)*multVec.size(), cudaMemcpyHostToDevice);
             };
