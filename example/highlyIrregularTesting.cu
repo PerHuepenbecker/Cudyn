@@ -127,6 +127,10 @@ int main(){
     std::uniform_int_distribution<uint64_t> dist(1, (1ULL << THRESHOLD_BASE) -1);
 
     uint64_t* data_h = (uint64_t*) malloc(sizeof(uint64_t) * PROBLEM_SIZE);
+
+    std::vector<uint64_t> vec_h(PROBLEM_SIZE);
+
+
     result* results_h = (result*) malloc(sizeof(result) * PROBLEM_SIZE);
 
     uint64_t* data_d;
@@ -140,8 +144,11 @@ int main(){
     cudaMalloc(&data_d, sizeof(uint64_t) * PROBLEM_SIZE);
 
     for(int i = 0; i < PROBLEM_SIZE; i++){
-        data_h[i] = dist(gen);
+        vec_h[i] = dist(gen);
     }
+
+    Cudyn::Utils::Memory::CudaArray<uint64_t> vec_d (vec_h);
+
 
     cudaMemcpy(data_d, data_h, sizeof(uint64_t) * PROBLEM_SIZE, cudaMemcpyHostToDevice);
 
@@ -166,9 +173,9 @@ int main(){
         }
     };
 
-    GridConfiguration::KernelConfig kernelConfig{.total_tasks = PROBLEM_SIZE, .grid_dimensions = NUM_BLOCKS, .block_dimensions = NUM_THREADS};
+    Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig{.total_tasks = PROBLEM_SIZE, .grid_dimensions = NUM_BLOCKS, .block_dimensions = NUM_THREADS};
     
-    Cudyn::Launcher::launch(kernelConfig, counting_logic);
+    Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(kernelConfig, counting_logic);
 
     //generic_irregular_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(PROBLEM_SIZE,NUM_BLOCKS, debugData_d, counting_logic);
     cudaMemcpy(results_h, results_d, sizeof(result) * PROBLEM_SIZE, cudaMemcpyDeviceToHost);

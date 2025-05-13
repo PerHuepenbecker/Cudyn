@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
         Cudyn::CSR::Kernel::CudynCSRSpMV<double> SpMVKernel(deviceData);
 
-        GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
+        Cudyn::Utils::GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 
         switch(kernelType){
                 case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
         }
         Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
 
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
         
         std::cout << "Cuda Success!" << std::endl;
         std::cout << "Output vector dimensions: " << deviceData.getResult().size() << std::endl;
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
         Cudyn::CSR::Kernel::CudynCSRSpMV<int> SpMVKernel(deviceData);
 
-        GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
+        Cudyn::Utils::GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
 
         switch(kernelType){
             case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
         
         std::cout << "Cuda Success!" << std::endl;
         std::cout << "Output vector dimensions: " << deviceData.getResult().size() << std::endl;

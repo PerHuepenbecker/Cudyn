@@ -35,7 +35,7 @@ __global__ void SpMVKernel(
 }
 
 template <typename T>
-auto lauchSpMVKernel(CudynCSR::Datastructures::DeviceDataSpMV<T>& deviceData, size_t numBlocks, size_t threadsPerBlock){
+auto lauchSpMVKernel(Cudyn::CSR::Datastructures::DeviceDataSpMV<T>& deviceData, size_t numBlocks, size_t threadsPerBlock){
     auto data = deviceData.csrData.csrMatrixData_d.get();
     auto columnIndices = deviceData.csrData.csrMatrixColIndices_d.get();
     auto rowPointers = deviceData.csrData.csrMatrixRowPtrs_d.get();
@@ -67,7 +67,7 @@ auto lauchSpMVKernel(CudynCSR::Datastructures::DeviceDataSpMV<T>& deviceData, si
     }
 
 
-    Utils::errorCheck();
+    Cudyn::Utils::errorCheck();
 }
 
 
@@ -100,13 +100,13 @@ int main(int argc, char** argv){
 
         MatrixMarketCSRParser<double> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count(), 1, true);
+        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count(), 1, true);
 
-        CudynCSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
+        Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
 
         lauchSpMVKernel<double>(deviceData, numBlocks, threadsPerBlock);
 
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
         
         std::cout << "Cuda Success!" << std::endl;
 
@@ -125,12 +125,12 @@ int main(int argc, char** argv){
         
         MatrixMarketCSRParser<int> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = CudynCSR::Helpers::generate_multiplication_vector<int>(csr_matrix.get_rows_count());
+        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<int>(csr_matrix.get_rows_count());
 
-        CudynCSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
+        Cudyn::CSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
         lauchSpMVKernel<int>(deviceData, numBlocks, threadsPerBlock);
 
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
 
         std::cout << "Cuda Success!" << std::endl;
         auto result = deviceData.getResult();

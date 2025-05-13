@@ -68,7 +68,7 @@ auto lauchSpMVKernel(Cudyn::CSR::Datastructures::DeviceDataSpMV<T>& deviceData, 
     }
 
 
-    Utils::errorCheck();
+    Cudyn::Utils::errorCheck();
 }
 
 template<typename T>
@@ -152,14 +152,14 @@ int main(int argc, char** argv) {
 
     Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData (csrMatrix, multVec);
 
-    auto kernelConfig = GridConfiguration::KernelConfig{.total_tasks = problemSize, .grid_dimensions = gridSize, .block_dimensions = blockDimensions};
+    auto kernelConfig = Cudyn::Utils::GridConfiguration::KernelConfig{.total_tasks = problemSize, .grid_dimensions = gridSize, .block_dimensions = blockDimensions};
 
     if(kernelType == "dynamic" || kernelType == "dual") {
         std::cout << "Launching dynamic Kernel" << std::endl;
         Cudyn::CSR::Kernel::CudynCSRSpMV<double> dynamicKernelLogic (deviceData);
 
         Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(kernelConfig, dynamicKernelLogic);
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
 
         auto result = deviceData.getResult();
         std::cout << "Dynamic success" << std::endl;
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
 
         lauchSpMVKernel<double>(deviceData, gridSizeB, blockDimensionsB);
 
-        Utils::errorCheck();
+        Cudyn::Utils::errorCheck();
 
         auto result = deviceData.getResult();
         std::cout << "Static success" << std::endl;
