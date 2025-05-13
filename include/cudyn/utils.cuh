@@ -2,10 +2,17 @@
 
 #include <cstdint>
 #include <iostream>
+#include <array>
+#include <vector>
+
 #include <cassert>
+#include <cstddef>
+#include <type_traits>
 #include <cuda_runtime.h>
 
-namespace Utils {
+
+
+namespace Cudyn::Utils {
 
     void errorCheck(){
         if (cudaGetLastError() != cudaSuccess) {
@@ -13,12 +20,14 @@ namespace Utils {
         }
     }
     
-    // Wrapper for safe RAII handling of memory via smart pointer inspired approach
+    namespace Memory{
+            // Wrapper for safe RAII handling of memory via smart pointer inspired approach
     template <typename T>
     class CudaDevicePointer {
         
         private:
             // Templated private internal pointer that is wrapped in RAII logic
+            size_t size = 0;
             T* pointer_ = nullptr;
         
         public:
@@ -34,7 +43,7 @@ namespace Utils {
             CudaDevicePointer& operator=(const CudaDevicePointer&) = delete;
 
             // Allow move by defining move and move assignment operaors
-            CudaDevicePointer(const CudaDevicePointer&& other) noexcept {
+            CudaDevicePointer(CudaDevicePointer&& other) noexcept {
                 pointer_ = other.pointer_;
                 other.pointer_ = nullptr;
             }
@@ -52,6 +61,7 @@ namespace Utils {
                 free();
                 cudaMalloc((void**)&pointer_, sizeof(T) * count);
                 errorCheck();
+                size = count;
                 if(zero){
                     cudaMemset(pointer_, 0, count);
                 }
@@ -61,6 +71,7 @@ namespace Utils {
                 if(pointer_){
                     cudaFree(pointer_);
                     pointer_ = nullptr;
+                    size = 0;
                 }
             }
 
@@ -68,7 +79,147 @@ namespace Utils {
 
             operator T*() const {return pointer_;}
     };
+
+    // Wrapper Classs for the RAII handled CudaDevicePointer for abstraction of basic cudaMemcpy() use to copy the data from host to device
+
+    template <typename T>
+    class CudaArray{
+        private:
+        CudaDevicePointer<T> pointer = CudaDevicePointer<T>{};
+        size_t allocated_size = 0;
+        bool is_empty = true;
+      
+        public: 
+        CudaArray() = default;
+        // Empty Constructor to preallocate a certain size of device memory
+        explicit CudaArray(size_t size){
+            pointer = CudaDevicePointer<T>(size);
+            allocated_size = size;
+        }
+        
+        CudaArray(const std::vector<T>& vec){
+            size_t size = vec.size();
+            pointer = CudaDevicePointer<T>(size);
+            allocated_size = size;
+            if(size != 0){
+                is_empty = false;
+            }
+
+            cudaMemcpy(pointer.get(), vec.data(), size * sizeof(T), cudaMemcpyHostToDevice);
+            errorCheck();
+        }
+
+        template<std::size_t N>
+        CudaArray(const std::array<T, N>& arr){
+            size_t size = N;
+            pointer = CudaDevicePointer<T>(size);
+            allocated_size = size;
+            
+            cudaMemcpy(pointer.get(), arr.data(), N * sizeof(T), cudaMemcpyHostToDevice);
+            errorCheck();
+            if(size != 0){
+                is_empty = false;
+            }
+        }
+
+        ~CudaArray(){
+            // Explicit free
+            pointer.free();
+        }
+
+        // Deleting copy constructors to prevent unnecessary global GPU memory usage by performing deep copies in the GPU memory
+
+        CudaArray(const CudaArray& other) = delete;
+        CudaArray& operator=(const CudaArray& other) = delete;
+
+        //Explicitly allowing move constructors 
+
+        CudaArray(CudaArray&&other) noexcept {
+            pointer = other.pointer;
+            allocated_size = other.allocated_size;
+            is_empty = other.is_empty;
+            other.pointer = nullptr;
+            other.allocated_size = 0;
+            other.is_empty = true;
+        }
+
+        CudaArray& operator=(CudaArray&&other) noexcept {
+            pointer = other.pointer;
+            allocated_size = other.allocated_size;
+            is_empty = other.is_empty;
+            other.pointer = nullptr;
+            other.allocated_size = 0;
+            other.is_empty = true;
+        }
+
+        // method to "upload" data from the host to the GPU
+        void upload(std::vector<T> vec){
+            
+            if(allocated_size != vec.size()){
+                pointer.free();
+                pointer.allocateMemory(vec.size());
+                allocated_size = vec.size();
+            }
+
+            cudaMemcpy(pointer.get(), vec.data(), sizeof(T)*vec.size(), cudaMemcpyHostToDevice);
+            if(vec.size > 0) is_empty = false;
+            errorCheck();
+        }
+
+        template <std::size_t N>
+        void upload(std::array<T,N> arr){
+                pointer.free();
+                pointer.allocateMemory(N);
+                allocated_size = N;
+
+            cudaMemcpy(pointer.get(), arr.data(), sizeof(T)*N, cudaMemcpyHostToDevice);
+            errorCheck();
+            if(N != 0) is_empty = false;
+        }
+
+        void download(std::vector<T> &vec){
+            
+            if(vec.size() != allocated_size){
+                std::cerr << "[Utils::Memory] Supplied Container size too small. Reallocating internal memory" << std::endl;
+                vec.resize(allocated_size);
+            }
+
+            cudaMemcpy(vec.data(), pointer.get(), sizeof(T)*allocated_size, cudaMemcpyDeviceToHost);            
+            errorCheck();
+        }
+
+
+        template <std::size_t N>
+        void download(std::array<T,N> &arr){
+            static_assert(N > 0, "Array of size 0 not supported here");
+            if(N != allocated_size){
+                throw std::runtime_error("[Memory::CudaArray::download] Array size mismatch. Copy data from GPU not possible");
+            }
+
+            cudaMemcpy(arr.data(), pointer.get(), sizeof(T)*N, cudaMemcpyDeviceToHost);            
+            errorCheck();
+        }
+
+        T* data(){
+            return pointer.get();
+        }
+
+        bool isEmpty(){
+            return is_empty;
+        }
+
+        size_t size(){
+            return allocated_size;
+        }
+
+    };
+
+    
+
 }
+
+
+
 
 namespace GridConfiguration {
 
@@ -134,3 +285,4 @@ namespace GridConfiguration {
     return config;
 }
 }
+};
