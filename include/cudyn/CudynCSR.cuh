@@ -130,8 +130,6 @@ namespace Cudyn::CSR {
                     size_t col_index = columnIndices_d[j]; 
                     T value = data_d[j];                 
         
-                    //printf("Value: %lf\n", value);
-                    //printf("Multvec: %lf\n", multiplicationVector_d[col_index]);
 
                     dotProduct += value * multiplicationVector_d[col_index];
                 }
