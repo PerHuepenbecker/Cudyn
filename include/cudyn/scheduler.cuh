@@ -115,7 +115,7 @@ namespace Cudyn::Scheduler{
 
     struct StandardScheduler {
         template <typename Functor>
-        static void launch(GridConfiguration::KernelConfig config, Functor f) {
+        static void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, Functor f) {
             genericIrregularKernel<<<config.grid_dimensions, config.block_dimensions>>>(
                 config.total_tasks, config.grid_dimensions, f);
         }
@@ -124,7 +124,7 @@ namespace Cudyn::Scheduler{
 
     struct ReducedAtomicScheduler {
         template <typename Functor>
-        static void launch(GridConfiguration::KernelConfig config, Functor f) {
+        static void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, Functor f) {
             genericIrregularKernelLowAtomics<<<config.grid_dimensions, config.block_dimensions>>>(
                 config.total_tasks, config.grid_dimensions, f);
         }
@@ -136,7 +136,7 @@ namespace Cudyn::Launcher{
 
 
     template <typename SchedulingPolicy, typename TaskFunctor>
-    __host__ void launch(GridConfiguration::KernelConfig config, TaskFunctor f, int deviceId = 0) {
+    __host__ void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, TaskFunctor f, int deviceId = 0) {
         if (!GridConfiguration::Details::validatGridConfigurationForDevice(config, deviceId)) {
             std::cerr << "Invalid Grid configuration for device" << std::endl;
             std::exit(EXIT_FAILURE);
@@ -159,7 +159,7 @@ namespace Cudyn::Launcher{
     }
 
     template <typename TaskFunctor>
-    __host__ void launch_old(GridConfiguration::KernelConfig kernelConfig, TaskFunctor f, Scheduler::KernelType type = Scheduler::KernelType::STANDARD, int deviceId = 0){
+    __host__ void launch_old(Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig, TaskFunctor f, Scheduler::KernelType type = Scheduler::KernelType::STANDARD, int deviceId = 0){
 
         // TODO: Integrate GridConfigruationChecking functionality
 
