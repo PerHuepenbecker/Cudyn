@@ -6,12 +6,17 @@
 #include <unordered_map>
 
 
+#include <string>
+#include <vector>
+#include <limits>
+
+    
+
+
 #include "../include/cudyn/scheduler.cuh"
 
-#define PROBLEM_SIZE (512*1024*2*2)
-#define NUM_BLOCKS 2048
-#define NUM_THREADS 256
 #define THRESHOLD_BASE 22
+
 
 
 typedef struct{
@@ -86,7 +91,7 @@ void print_worked_tasks(debugData* debugData, unsigned int global_index) {
     std::cout << "---------------------" << std::endl;
 }
 
-void print_task_distros(debugData* debugData){
+void print_task_distros(debugData* debugData, unsigned int NUM_BLOCKS, unsigned int NUM_THREADS){
 
     std::cout << "Printing task distros" << std::endl;
 
@@ -106,11 +111,24 @@ void print_task_distros(debugData* debugData){
 }
 
 
-int main(){
+int main(int argc, char** argv){
     std::cout << "Starting..." << std::endl;
 
+    if(argc != 6){
+        std::cerr << "Usage: <prog> <problem_size as 2^x> <blocks_dynamic> <threads_dynamic> <blocks_static> <threads_static>"<< std::endl;
+        exit(1);
+    }
+
+    unsigned int tmp =  std::stoi(argv[1]);
+    unsigned int PROBLEM_SIZE = 1 << tmp;
+    unsigned int NUM_BLOCKS = std::stoi(argv[2]);
+    unsigned int NUM_THREADS = std::stoi(argv[3]);
+    unsigned int REGULAR_KERNEL_BLOCKS = std::stoi(argv[4]);
+    unsigned int REGULAR_KERNEL_THREADS = std::stoi(argv[5]);
+    
+
     // Your new threshold calculation logic here...
-// Example:
+    // Example:
     double desired_fraction_for_steps_one = 0.75; // Target 25%
     uint64_t max_random_data_value = (1ULL << THRESHOLD_BASE) - 1;
     uint64_t calculated_threshold;
@@ -143,8 +161,13 @@ int main(){
     cudaMalloc(&results_d, sizeof(result) * PROBLEM_SIZE);
     cudaMalloc(&data_d, sizeof(uint64_t) * PROBLEM_SIZE);
 
-    for(int i = 0; i < PROBLEM_SIZE; i++){
-        vec_h[i] = dist(gen);
+    int maxValue = 4 * ((1 << 23) -1) ;
+    double percentageOneIt = 0.25;
+    std::mt19937 gen_2 (123);
+    std::uniform_real_distribution <double> dist2 (0 , 1);
+
+    for(auto &el: vec_h){
+        el = (dist2(gen_2) <= percentageOneIt) ? 1: maxValue;
     }
 
     Cudyn::Utils::Memory::CudaArray<uint64_t> vec_d (vec_h);
@@ -173,9 +196,29 @@ int main(){
         }
     };
 
+    auto data_vec = vec_d.data();
+
+    auto subtractingLogic = [data_vec,results_d] __device__ (size_t i){
+        unsigned int steps = 0;
+        unsigned int initial_value = data_vec[i];
+        unsigned int value = initial_value;
+        while(true){
+            steps++;
+            if(value == 1){
+                results_d[i].baseNumber = data_vec[i];
+                results_d[i].steps = steps;
+                results_d[i].workerThread = blockIdx.x*blockDim.x+threadIdx.x;
+                break;
+            }
+            value--;
+        }
+    };
+
     Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig{.total_tasks = PROBLEM_SIZE, .grid_dimensions = NUM_BLOCKS, .block_dimensions = NUM_THREADS};
     
-    Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(kernelConfig, counting_logic);
+    Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(kernelConfig, subtractingLogic);
+
+    Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(kernelConfig, subtractingLogic);
 
     //generic_irregular_kernel<<<NUM_BLOCKS, NUM_THREADS>>>(PROBLEM_SIZE,NUM_BLOCKS, debugData_d, counting_logic);
     cudaMemcpy(results_h, results_d, sizeof(result) * PROBLEM_SIZE, cudaMemcpyDeviceToHost);
@@ -189,7 +232,7 @@ int main(){
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
-    generic_regular_kernel<<<4096, 512>>>(counting_logic);
+    generic_regular_kernel<<<REGULAR_KERNEL_BLOCKS, REGULAR_KERNEL_THREADS>>>(subtractingLogic);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -216,19 +259,12 @@ int main(){
             num_other++;
         }
     }
-
    
-
     std::cout << "Number of steps == 1: " << num_one << std::endl;
     std::cout << "Number of steps != 1: " << num_other << std::endl;
 
     auto percentage_one = ((double)num_one / PROBLEM_SIZE) * 100;
     auto percentage_other = ((double)num_other / PROBLEM_SIZE) * 100;
-
-    print_task_distros(debugData_h);
-    print_worked_tasks(debugData_h, 0);
-    print_worked_tasks(debugData_h, 1);
-    print_worked_tasks(debugData_h, 2048);
 
 
     for(int i = 0; i < NUM_BLOCKS*NUM_THREADS; i++){
