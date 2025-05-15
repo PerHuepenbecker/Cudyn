@@ -111,7 +111,7 @@ namespace Cudyn::CSR {
             const T* multiplicationVector_d = nullptr;
             T* resultVector_d = nullptr;
 
-            __host__ __device__ CudynCSRSpMV(Datastructures::DeviceDataSpMV<T>& deviceData){
+            __host__ CudynCSRSpMV(Datastructures::DeviceDataSpMV<T>& deviceData){
                 data_d = deviceData.csrData.csrMatrixData_d.get();
                 columnIndices_d = deviceData.csrData.csrMatrixColIndices_d.get();
                 rowPointers_d = deviceData.csrData.csrMatrixRowPtrs_d.get();
@@ -120,7 +120,7 @@ namespace Cudyn::CSR {
                 resultVector_d = deviceData.result.get();
             }
 
-            __device__ void operator()(size_t i) const {
+            __host__ __device__ void operator()(size_t i) const {
                 size_t row_start_offset = rowPointers_d[i];
                 size_t row_end_offset = rowPointers_d[i+1];
                 
