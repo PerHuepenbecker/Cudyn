@@ -12,3 +12,6 @@ dynamicTesting
 randomizedTesting
 
 highlyIrregularTesting
+highlyIrregular
+.gitignore
+baselineTEsting
