@@ -137,7 +137,7 @@ namespace Cudyn::Launcher{
 
     template <typename SchedulingPolicy, typename TaskFunctor>
     __host__ void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, TaskFunctor f, int deviceId = 0) {
-        if (!GridConfiguration::Details::validatGridConfigurationForDevice(config, deviceId)) {
+        if (!Cudyn::Utils::GridConfiguration::Details::validatGridConfigurationForDevice(config, deviceId)) {
             std::cerr << "Invalid Grid configuration for device" << std::endl;
             std::exit(EXIT_FAILURE);
         }
@@ -163,7 +163,7 @@ namespace Cudyn::Launcher{
 
         // TODO: Integrate GridConfigruationChecking functionality
 
-        if(!GridConfiguration::Details::validatGridConfigurationForDevice(kernelConfig, deviceId)){
+        if(!Cudyn::Utils::GridConfiguration::Details::validatGridConfigurationForDevice(kernelConfig, deviceId)){
             std::cerr << "Invalid Grid dimensions for GPU" << std::endl;
             exit(1);
         }
