@@ -101,13 +101,7 @@ int main(int argc, char** argv) {
 
         int total_tasks = deviceData.csrData.rows;
 
-        for(const auto threadsPerBlock: threadsPerBlockArgs){
-
-            std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;
-            std::cout << std::endl;  
-
             for(const auto tasksPerThread: tasksPerThreadArgs){
-
 
             std::cout << "Testing " << tasksPerThread<< "Tasks per Thread" << std::endl;
             std::cout << std::endl;  
@@ -134,7 +128,6 @@ int main(int argc, char** argv) {
         
                 Cudyn::Utils::errorCheck();
             }
-        }
         }
     }        
 
