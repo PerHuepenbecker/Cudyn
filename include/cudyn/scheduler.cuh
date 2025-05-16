@@ -1,6 +1,10 @@
 #pragma once
 
 #include "utils.cuh"
+#include <iostream>     
+#include <vector>       
+#include <tuple>        
+#include <algorithm> 
 
 
 
@@ -132,6 +136,75 @@ namespace Cudyn::Scheduler{
 
 };
 
+namespace Cudyn::Profiling{
+
+    namespace Details{
+        template<typename T>
+        double average(const T& vec){
+            double sum = 0;
+            for(const auto& val: vec){
+                sum+= val;
+            }
+            
+            return vec.empty() ? 0.0 : sum/vec.size();}
+    
+        template<typename T>
+        double standardDeviation(const T& vec) {
+            double avg = average(vec);
+            double variance = 0;
+            for (const auto& el : vec) {
+                double diff = el - avg;
+                variance += diff * diff;
+            }
+            
+            return vec.empty() ? 0.0 : std::sqrt(variance / vec.size()); 
+        }
+    }
+
+
+
+    template <typename SchedulingPolicy, typename TaskFunctor>
+    __host__ auto launchProfiled(Cudyn::Utils::GridConfiguration::KernelConfig config, TaskFunctor f,size_t iterationsCount = 10, int deviceId = 0) {
+        if (!Cudyn::Utils::GridConfiguration::Details::validatGridConfigurationForDevice(config, deviceId)) {
+            std::cerr << "Invalid Grid configuration for device" << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+
+        std::vector<float> measurements;
+
+        for(int i = 0; i < iterationsCount; i++){
+            cudaEvent_t start, stop;
+            cudaEventCreate(&start);
+            cudaEventCreate(&stop);
+            cudaEventRecord(start);
+
+            SchedulingPolicy::template launch(config, f);
+
+            cudaEventRecord(stop);
+            cudaEventSynchronize(stop);
+
+            float milliseconds = 0;
+            cudaEventElapsedTime(&milliseconds, start, stop);
+            measurements.push_back(milliseconds);
+            cudaEventDestroy(start);
+            cudaEventDestroy(stop);
+            cudaDeviceSynchronize();
+        }
+        
+        double avg = Details::average(measurements);
+        double stddev = Details::standardDeviation(measurements);
+
+        std::cout << "Kernel execution time (" << typeid(SchedulingPolicy).name() << "): "
+                  << avg << " ms" << std::endl;
+                  std::cout << "Standard deviation: " << stddev << " ms" << std::endl;
+        std::cout << "Number of measurements: " << measurements.size() << std::endl;
+        std::cout << "Minimum time: " << *std::min_element(measurements.begin(), measurements.end()) << " ms" << std::endl;
+        std::cout << "Maximum time: " << *std::max_element(measurements.begin(), measurements.end()) << " ms" << std::endl;
+        
+        return std::make_tuple(avg, stddev);
+    }
+}
+
 namespace Cudyn::Launcher{
 
 
@@ -142,71 +215,9 @@ namespace Cudyn::Launcher{
             std::exit(EXIT_FAILURE);
         }
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
-
         SchedulingPolicy::template launch(config, f);
 
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        std::cout << "Kernel execution time (" << typeid(SchedulingPolicy).name() << "): "
-                  << milliseconds << " ms" << std::endl;
     }
 
-    template <typename TaskFunctor>
-    __host__ void launch_old(Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig, TaskFunctor f, Scheduler::KernelType type = Scheduler::KernelType::STANDARD, int deviceId = 0){
-
-        // TODO: Integrate GridConfigruationChecking functionality
-
-        if(!Cudyn::Utils::GridConfiguration::Details::validatGridConfigurationForDevice(kernelConfig, deviceId)){
-            std::cerr << "Invalid Grid dimensions for GPU" << std::endl;
-            exit(1);
-        }
-
-        uint64_t block_tasks = kernelConfig.total_tasks / kernelConfig.grid_dimensions;
-
-        std::cout << "Tasks per block " << block_tasks << std::endl;
-        std::cout << "Remainder: " << kernelConfig.total_tasks % kernelConfig.grid_dimensions << std::endl;
-        std::cout << "Tasks per thread " << block_tasks / kernelConfig.block_dimensions << std::endl;
-
-        cudaEvent_t start, stop;
-        
-        if(type == Scheduler::KernelType::STANDARD){
-            
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
-            cudaEventRecord(start);
-
-            Scheduler::genericIrregularKernel<<<kernelConfig.grid_dimensions, kernelConfig.block_dimensions>>>(kernelConfig.total_tasks,kernelConfig.grid_dimensions, f);
-            
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            float milliseconds = 0;
-            cudaEventElapsedTime(&milliseconds, start, stop);
-            std::cout << "Dynamic Kernel execution time Standard: " << milliseconds << "ms" << std::endl;
-
-
-        } else {
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
-
-            cudaEventRecord(start); 
-
-            Scheduler::genericIrregularKernelLowAtomics<<<kernelConfig.grid_dimensions, kernelConfig.block_dimensions>>>(kernelConfig.total_tasks,kernelConfig.grid_dimensions, f);  
-
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            float milliseconds = 0;
-            cudaEventElapsedTime(&milliseconds, start, stop);
-            std::cout << "Dynamic Kernel execution time reduced Atomics: " << milliseconds << "ms" << std::endl;
-
-        }
-        
-
-    }
 };
+
