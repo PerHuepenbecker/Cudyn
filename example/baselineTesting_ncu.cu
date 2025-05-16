@@ -112,7 +112,9 @@ int main(int argc, char** argv){
             lauchSpMVKernel<double>(deviceData, numBlocks, el);
 
             Cudyn::Utils::errorCheck();
-        
+
+            auto result = deviceData.getResult();
+            std::cout << "Result: " << result[0] << std::endl;
         }
 
     } else if (fileDataType == MatrixMarketHeaderTypes::DataType::INTEGER || fileDataType == MatrixMarketHeaderTypes::DataType::PATTERN){
@@ -132,6 +134,10 @@ int main(int argc, char** argv){
             lauchSpMVKernel<int>(deviceData, numBlocks, el);
 
             Cudyn::Utils::errorCheck();
+
+            auto result = deviceData.getResult();
+            std::cout << "Result: " << result[0] << std::endl;
+            
         
             
         }

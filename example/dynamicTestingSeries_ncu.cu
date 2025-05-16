@@ -76,9 +76,13 @@ int main(int argc, char** argv) {
                 switch(kernelType){
                         case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
                             Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
+                            auto result = deviceData.getResult();
+                            std::cout << "Result: " << result[0] << std::endl;
                             break;
                         } default: {
                             Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);                            
+                            auto result = deviceData.getResult();
+                            std::cout << "Result: " << result[0] << std::endl;
                         }
                     
                 }
@@ -119,9 +123,13 @@ int main(int argc, char** argv) {
                 switch(kernelType){
                         case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{
                             Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
+                            auto result = deviceData.getResult();
+                            std::cout << "Result: " << result[0] << std::endl;
                             break;
                         } default: {
-                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);                            
+                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel); 
+                            auto result = deviceData.getResult();
+                            std::cout << "Result: " << result[0] << std::endl;                           
                         }
                     
                 }
