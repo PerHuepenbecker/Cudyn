@@ -35,8 +35,6 @@ int main(int argc, char** argv) {
     auto getKernelType = [&kernelTypeStr](){
         if(kernelTypeStr == "less-atomic"){
             return Cudyn::Scheduler::KernelType::REDUCED_ATOMICS;
-        } else if(kernelTypeStr == "batch") {
-            return Cudyn::Scheduler::KernelType::BATCH;
         } else return Cudyn::Scheduler::KernelType::STANDARD;
     };
 
@@ -84,6 +82,8 @@ int main(int argc, char** argv) {
         Cudyn::CSR::Kernel::CudynCSRSpMV<int> SpMVKernel(deviceData);
 
         Cudyn::Utils::GridConfiguration::KernelConfig config{.total_tasks = deviceData.csrData.rows, .grid_dimensions = (size_t)numBlocks, .block_dimensions = (size_t)threadsPerBlock};
+
+        std::cout << "Starting dynamic kernel with " << (static_cast<double>(deviceData.csrData.rows) / numBlocks) / threadsPerBlock << std::endl;
 
         switch(kernelType){
             case Cudyn::Scheduler::KernelType::REDUCED_ATOMICS:{

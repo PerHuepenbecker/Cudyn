@@ -68,10 +68,12 @@ typedef struct{
 
 
 template <typename TaskFunctor>
-__global__ void generic_regular_kernel (TaskFunctor f){
+__global__ void generic_regular_kernel (size_t task_count, TaskFunctor f){
 
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
-    f(index);
+    if(index < task_count){
+        f(index);
+    }
 }
 
 
@@ -110,6 +112,15 @@ void print_task_distros(debugData* debugData, unsigned int NUM_BLOCKS, unsigned 
     }
 }
 
+template <typename TaskFunctor>
+        __global__ void gridStrideKernel(uint64_t total_tasks, TaskFunctor f) {
+      uint64_t thread_global_id = blockIdx.x * blockDim.x + threadIdx.x;
+      uint64_t total_threads_in_grid = gridDim.x * blockDim.x;
+
+      for (uint64_t task_idx = thread_global_id; task_idx < total_tasks; task_idx += total_threads_in_grid) {
+          f(task_idx);
+      }
+  }
 
 int main(int argc, char** argv){
     std::cout << "Starting..." << std::endl;
@@ -119,13 +130,27 @@ int main(int argc, char** argv){
         exit(1);
     }
 
+    unsigned int PROBLEM_SIZE = 0;
     unsigned int tmp =  std::stoi(argv[1]);
-    unsigned int PROBLEM_SIZE = 1 << tmp;
+    if(tmp == 32){
+        PROBLEM_SIZE = (1 << tmp)-1;
+    } else {
+        PROBLEM_SIZE = (1 << tmp);
+    }
+    
     unsigned int NUM_BLOCKS = std::stoi(argv[2]);
     unsigned int NUM_THREADS = std::stoi(argv[3]);
     unsigned int REGULAR_KERNEL_BLOCKS = std::stoi(argv[4]);
     unsigned int REGULAR_KERNEL_THREADS = std::stoi(argv[5]);
-    
+
+    auto dynamicThreads = NUM_BLOCKS * NUM_THREADS;
+    std::cout << "Dynamic Thread config: " << static_cast<float>(PROBLEM_SIZE) / dynamicThreads << " Tasks per Thread" << std::endl;
+
+
+    if(REGULAR_KERNEL_BLOCKS * REGULAR_KERNEL_THREADS < PROBLEM_SIZE){
+        std::cerr << "Regular Kernel misized" << std::endl;
+        exit(1);
+    }
 
     // Your new threshold calculation logic here...
     // Example:
@@ -141,13 +166,39 @@ int main(int argc, char** argv){
 
     //auto threshold = (1ULL << THRESHOLD_BASE) - ((1ULL << THRESHOLD_BASE) / 2);
 
-    std::mt19937 gen(12345);
+    std::mt19937 gen(42);
     std::uniform_int_distribution<uint64_t> dist(1, (1ULL << THRESHOLD_BASE) -1);
 
     uint64_t* data_h = (uint64_t*) malloc(sizeof(uint64_t) * PROBLEM_SIZE);
 
     std::vector<uint64_t> vec_h(PROBLEM_SIZE);
 
+   auto analyzeVec_h = [&vec_h]() {
+    size_t count_32blocksOfOne = 0;
+
+    for (size_t i = 0; i < vec_h.size(); i += 32) {
+        uint64_t* block = &vec_h[i]; 
+        size_t blockSize = std::min<size_t>(32, vec_h.size() - i);
+        size_t blockCountNotOne = 0;
+
+        bool notOne = false;
+
+        for (size_t j = 0; j < blockSize; ++j) {
+            if (block[j] != 1){
+                notOne = true;
+                blockCountNotOne++;
+            }
+        }
+
+        if(!notOne){
+            count_32blocksOfOne++;
+        }
+    }
+
+    std::cout << "Warp work strealing candidates: "<< count_32blocksOfOne << std::endl;
+};
+
+    
 
     result* results_h = (result*) malloc(sizeof(result) * PROBLEM_SIZE);
 
@@ -161,9 +212,10 @@ int main(int argc, char** argv){
     cudaMalloc(&results_d, sizeof(result) * PROBLEM_SIZE);
     cudaMalloc(&data_d, sizeof(uint64_t) * PROBLEM_SIZE);
 
-    int maxValue = 4 * ((1 << 23) -1) ;
-    double percentageOneIt = 0.25;
-    std::mt19937 gen_2 (123);
+    
+    int maxValue = 1<<23;
+    double percentageOneIt = 0.95;
+    std::mt19937 gen_2 (123456);
     std::uniform_real_distribution <double> dist2 (0 , 1);
 
     for(auto &el: vec_h){
@@ -172,6 +224,17 @@ int main(int argc, char** argv){
 
     Cudyn::Utils::Memory::CudaArray<uint64_t> vec_d (vec_h);
 
+    analyzeVec_h();
+
+    for(int i = 0; i < 32; i++){
+        std::cout << vec_h[i] << " ";
+    }
+    std::cout << std::endl;
+
+    for(int i = 32; i < 64; i++){
+        std::cout << vec_h[i] << " ";
+    }
+    std::cout << std::endl;
 
     cudaMemcpy(data_d, data_h, sizeof(uint64_t) * PROBLEM_SIZE, cudaMemcpyHostToDevice);
 
@@ -198,18 +261,46 @@ int main(int argc, char** argv){
 
     auto data_vec = vec_d.data();
 
+    auto matrixMultKernel = [data_vec, results_d] __device__ (size_t i) {
+    
+    const int N = 4;
+    float A[N][N], B[N][N], C[N][N] = {0};
+    unsigned int seed = data_vec[i];
+
+    for (int r = 0; r < N; ++r)
+        for (int c = 0; c < N; ++c) {
+            A[r][c] = (seed * (r + 1) * (c + 1)) % 10;
+            B[r][c] = ((seed + 1) * (r + 1) * (c + 1)) % 10;
+        }
+
+    for (int r = 0; r < N; ++r)
+        for (int c = 0; c < N; ++c)
+            for (int k = 0; k < N; ++k)
+                C[r][c] += A[r][k] * B[k][c];
+
+    results_d[i].baseNumber = data_vec[i];
+    results_d[i].steps = (unsigned int)(C[0][0]); // Store a single value
+    results_d[i].workerThread = blockIdx.x * blockDim.x + threadIdx.x;
+};
+
     auto subtractingLogic = [data_vec,results_d] __device__ (size_t i){
         unsigned int steps = 0;
-        unsigned int initial_value = data_vec[i];
-        unsigned int value = initial_value;
+        unsigned int value = data_vec[i];
+        unsigned int initial_value = value;
+        
         while(true){
             steps++;
             if(value == 1){
-                results_d[i].baseNumber = data_vec[i];
+                results_d[i].baseNumber = initial_value;
                 results_d[i].steps = steps;
                 results_d[i].workerThread = blockIdx.x*blockDim.x+threadIdx.x;
                 break;
             }
+
+            //initial_value += (sinf(initial_value) +1);
+
+            initial_value += 1-(2*-1);
+            initial_value -= 1-(2*-1);
             value--;
         }
     };
@@ -232,7 +323,7 @@ int main(int argc, char** argv){
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
-    generic_regular_kernel<<<REGULAR_KERNEL_BLOCKS, REGULAR_KERNEL_THREADS>>>(subtractingLogic);
+    generic_regular_kernel<<<REGULAR_KERNEL_BLOCKS, REGULAR_KERNEL_THREADS>>>(PROBLEM_SIZE, subtractingLogic);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -241,6 +332,24 @@ int main(int argc, char** argv){
 
     std::cout << "Regular mapped implementation took " << milliseconds << std::endl;
 
+  /*   {
+        cudaEvent_t start, stop;
+
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+
+        gridStrideKernel<<<NUM_BLOCKS, NUM_THREADS>>>(PROBLEM_SIZE, subtractingLogic);
+
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+
+        std::cout << "Grid stride kernel implementation took " << milliseconds << std::endl;
+
+    } */
+    
     cudaFree(data_d);
     cudaFree(debugData_d);
     cudaFree(results_d);
@@ -249,8 +358,6 @@ int main(int argc, char** argv){
     unsigned int num_other = 0;
 
     
-
-
     for (int i = 0; i < PROBLEM_SIZE; i++) {
         if(results_h[i].steps == 1){
             num_one++;
@@ -278,6 +385,7 @@ int main(int argc, char** argv){
     std::cout << "Percentage of steps == 1: " << percentage_one << "%" << std::endl;
     std::cout << "Percentage of steps != 1: " << percentage_other << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
+    
 
 
     free(data_h);

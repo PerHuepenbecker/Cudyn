@@ -28,11 +28,36 @@ __global__ void SpMVKernel(
 
         for (size_t j = rowStartOffset; j < rowEndOffset; ++j) {
             dotProduct += dataPointer[j] * multiplicationVector[columnIndices[j]];
-        }
-
+        }    
+        
         resultVector[row] = dotProduct;
-    }  
+    }      
+}    
+
+template<typename T>
+double average(const T& vec){
+    double sum = 0;
+    
+    for(const auto& val: vec){
+        sum+= val;
+    }
+
+    return vec.empty() ? 0.0 : sum/vec.size();
 }
+
+template<typename T>
+double standardDeviation(const T& vec) {
+    double avg = average(vec);
+
+    double variance = 0;
+    for (const auto& el : vec) {
+        double diff = el - avg;
+        variance += diff * diff;
+    }
+
+    return vec.empty() ? 0.0 : std::sqrt(variance / vec.size()); 
+}
+
 
 template <typename T>
 auto lauchSpMVKernel(Cudyn::CSR::Datastructures::DeviceDataSpMV<T>& deviceData, size_t numBlocks, size_t threadsPerBlock){
@@ -45,54 +70,76 @@ auto lauchSpMVKernel(Cudyn::CSR::Datastructures::DeviceDataSpMV<T>& deviceData, 
 
     auto rows = deviceData.csrData.rows;
 
+    std::vector<float> measurements;
+
     if(numBlocks * threadsPerBlock >= rows){
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
+        for(int i = 0; i < 10; i++){
 
-        cudaEventRecord(start);
+            cudaEvent_t start, stop;
+            cudaEventCreate(&start);
+            cudaEventCreate(&stop);
 
-        SpMVKernel<<<numBlocks, threadsPerBlock>>>(data, columnIndices, rowPointers, multiplicationVector, resultVector, rows);
+            cudaEventRecord(start);
 
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
+            SpMVKernel<<<numBlocks, threadsPerBlock>>>(data, columnIndices, rowPointers, multiplicationVector, resultVector, rows);
 
-        std::cout << "Kernel execution time: " << milliseconds << "ms" << std::endl;
+            cudaEventRecord(stop);
+            cudaEventSynchronize(stop);
+            float milliseconds = 0;
+            cudaEventElapsedTime(&milliseconds, start, stop);
+
+            measurements.push_back(milliseconds);
+            cudaEventDestroy(start);
+            cudaEventDestroy(stop);
+            cudaDeviceSynchronize();
+        }    
+
+        std::cout << "\nRuntime profiling results: " << std::endl;
+        std::cout << "Average runtime " << average(measurements) << std::endl;
+        std::cout << "Standard deviation " << standardDeviation(measurements) << std::endl;
+        std::cout << "Minimum runtime " << *std::min_element(measurements.begin(), measurements.end()) << std::endl;
+        std::cout << "Maximum runtime " << *std::max_element(measurements.begin(), measurements.end()) << std::endl;
+        std::cout << "Number of measurements " << measurements.size() << std::endl;
+
+
 
     } else {
         std::cerr << "Warning: Number of threads are not enough" << std::endl;
-    }
+    }    
 
 
     Cudyn::Utils::errorCheck();
-}
-
+}    
 
 int main(int argc, char** argv){
 
-    if(argc != 4){
+    if(argc < 3){
         std::cerr << "Missing argument: filename" << std::endl;
         std::cerr << "Usage: <program name> <filename>" << std::endl;
         std::cerr << "Exiting.." << std::endl;
         exit(1);
     };
 
+    
+
     std::string filename = argv[1];
 
-    int numBlocks = std::stoi(argv[2]);
-    int threadsPerBlock = std::stoi(argv[3]);
+    //int threadsPerBlock = std::stoi(argv[2]);
 
-    if(numBlocks <= 0) {
-        std::cerr << "Error: Bad number of blocks: " << numBlocks << " - exiting" << std::endl;
+    std::vector<int> threadCountArguments;
+
+    for(int i = 2; i < argc; ++i){
+        int threadCountArg = std::stoi(argv[i]);
+
+        if(threadCountArg <= 0 || threadCountArg > 1024){
+        std::cerr << "Error: Bad number of threads per block: " << threadCountArg << " - exiting" << std::endl;
+        exit(1);
     }
-    if(threadsPerBlock <= 0 || threadsPerBlock > 2048){
-        std::cerr << "Error: Bad number of threads per block: " << threadsPerBlock << " - exiting" << std::endl;
+        threadCountArguments.push_back(threadCountArg);
     }
 
-
+    
     auto fileDataType = MatrixMarketCSRParserBase::peekHeader(filename);
 
 
@@ -102,24 +149,19 @@ int main(int argc, char** argv){
         auto csr_matrix = parser.exportCSRMatrix();
         auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count(), 1, true);
 
-        Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
+        for(const auto el: threadCountArguments){
+            int numBlocks = (csr_matrix.get_rows_count() + el - 1) / el;
 
-        lauchSpMVKernel<double>(deviceData, numBlocks, threadsPerBlock);
+            std::cout << "\nLaunching with " << el << "Threads per Block\n"; 
+            std::cout << "Launcing with " << numBlocks << " Blocks\n\n";
 
-        Cudyn::Utils::errorCheck();
+            Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
+
+            lauchSpMVKernel<double>(deviceData, numBlocks, el);
+
+            Cudyn::Utils::errorCheck();
         
-        std::cout << "Cuda Success!" << std::endl;
-
-        auto result = deviceData.getResult();
-        size_t zeroCount = 0;
-        for(const auto& el :result){
-            if (el==0){
-                zeroCount++;
-            } 
         }
-
-        std::cout << "Output vector dimensions: " << result.size() << std::endl;        
-        std::cout << "Contains " << zeroCount << " zeros" << std::endl;
 
     } else if (fileDataType == MatrixMarketHeaderTypes::DataType::INTEGER || fileDataType == MatrixMarketHeaderTypes::DataType::PATTERN){
         
@@ -127,22 +169,21 @@ int main(int argc, char** argv){
         auto csr_matrix = parser.exportCSRMatrix();
         auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<int>(csr_matrix.get_rows_count());
 
-        Cudyn::CSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
-        lauchSpMVKernel<int>(deviceData, numBlocks, threadsPerBlock);
+         for(const auto el: threadCountArguments){
+            int numBlocks = (csr_matrix.get_rows_count() + el - 1) / el;
 
-        Cudyn::Utils::errorCheck();
+            std::cout << "\nLaunching with " << el << "Threads per Block\n"; 
+            std::cout << "Launcing with " << numBlocks << " Blocks\n\n";
 
-        std::cout << "Cuda Success!" << std::endl;
-        auto result = deviceData.getResult();
-        size_t zeroCount = 0;
-        for(const auto& el :result){
-            if (el==0){
-                zeroCount++;
-            } 
+            Cudyn::CSR::Datastructures::DeviceDataSpMV<int> deviceData(csr_matrix, multiplicationVector);
+
+            lauchSpMVKernel<int>(deviceData, numBlocks, el);
+
+            Cudyn::Utils::errorCheck();
+        
+            
         }
-
-        std::cout << "Output vector dimensions: " << result.size() << std::endl;        
-        std::cout << "Contains " << zeroCount << " zeros" << std::endl;
+        
     }
 
 }
