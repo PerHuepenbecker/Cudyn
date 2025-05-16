@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
         MatrixMarketCSRParser<double> parser(filename);
         auto csr_matrix = parser.exportCSRMatrix();
-        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count());
+        auto multiplicationVector = Cudyn::CSR::Helpers::generate_multiplication_vector<double>(csr_matrix.get_rows_count(), 1, true);
 
         Cudyn::CSR::Datastructures::DeviceDataSpMV<double> deviceData(csr_matrix, multiplicationVector);
 
@@ -57,15 +57,15 @@ int main(int argc, char** argv) {
 
         int total_tasks = deviceData.csrData.rows;
 
-        for(const auto threadsPerBlock: threadsPerBlockArgs){
+        for(const auto tasksPerThread: tasksPerThreadArgs){
 
 
-            std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;
+            std::cout << "Testing " << tasksPerThread<< "Tasks per Thread" << std::endl;
             std::cout << std::endl;  
 
-            for(const auto tasksPerThread: tasksPerThreadArgs){
+            for(const auto threadsPerBlock: threadsPerBlockArgs){
 
-                std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
+                std::cout << "Testing " << threadsPerBlock << "ThreadsPerBlock" << std::endl;
                 std::cout << std::endl;  
                 
                 int total_threads = (total_tasks + tasksPerThread - 1) / tasksPerThread;
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                             Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
                             break;
                         } default: {
-                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
+                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);                            
                         }
                     
                 }
@@ -108,9 +108,14 @@ int main(int argc, char** argv) {
 
             for(const auto tasksPerThread: tasksPerThreadArgs){
 
-                std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
-                std::cout << std::endl;  
 
+            std::cout << "Testing " << tasksPerThread<< "Tasks per Thread" << std::endl;
+            std::cout << std::endl;  
+
+            for(const auto threadsPerBlock: threadsPerBlockArgs){
+
+                std::cout << "Testing " << threadsPerBlock << "ThreadsPerBlock" << std::endl;
+                std::cout << std::endl;  
                 
                 int total_threads = (total_tasks + tasksPerThread - 1) / tasksPerThread;
                 int numBlocks = (total_threads + threadsPerBlock - 1) / threadsPerBlock;
@@ -122,13 +127,14 @@ int main(int argc, char** argv) {
                             Cudyn::Launcher::launch<Cudyn::Scheduler::ReducedAtomicScheduler>(config, SpMVKernel);
                             break;
                         } default: {
-                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);
+                            Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel);                            
                         }
                     
                 }
         
                 Cudyn::Utils::errorCheck();
             }
+        }
         }
     }        
 
