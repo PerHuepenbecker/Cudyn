@@ -1,6 +1,7 @@
 build/*
 .vscode/*
 csr_ex
+test_matrices/*
 matrixMarketTest
 example/matrixMarketTest.cpp
 example/memoryTesting.cu
@@ -14,4 +15,4 @@ randomizedTesting
 highlyIrregularTesting
 highlyIrregular
 .gitignore
-baselineTEsting
+
