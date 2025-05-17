@@ -57,16 +57,16 @@ int main(int argc, char** argv) {
 
         int total_tasks = deviceData.csrData.rows;
 
-        for(const auto threadsPerBlock: threadsPerBlockArgs){
+        for(const auto tasksPerThread: tasksPerThreadArgs)
+        {
 
-
-            std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;
+            std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
             std::cout << std::endl;  
-
-            for(const auto tasksPerThread: tasksPerThreadArgs){
-
-                std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
-                std::cout << std::endl;  
+            
+            for(const auto threadsPerBlock: threadsPerBlockArgs){
+                
+                
+                std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;std::cout << std::endl;  
                 
                 int total_threads = (total_tasks + tasksPerThread - 1) / tasksPerThread;
                 int numBlocks = (total_threads + threadsPerBlock - 1) / threadsPerBlock;
@@ -101,15 +101,15 @@ int main(int argc, char** argv) {
 
         int total_tasks = deviceData.csrData.rows;
 
-        for(const auto threadsPerBlock: threadsPerBlockArgs){
-
-            std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;
+        for(const auto tasksPerThread: tasksPerThreadArgs){
             std::cout << std::endl;  
-
-            for(const auto tasksPerThread: tasksPerThreadArgs){
-
-                std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
-                std::cout << std::endl;  
+            std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
+            std::cout << std::endl;  
+            
+            for(const auto threadsPerBlock: threadsPerBlockArgs){
+                
+                
+                std::cout << "Testing " << threadsPerBlock << "Threads per Block" << std::endl;
 
                 
                 int total_threads = (total_tasks + tasksPerThread - 1) / tasksPerThread;
