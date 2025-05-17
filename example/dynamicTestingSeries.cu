@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         kernelTypeStr = argv[2];
     }
 
-    std::vector<size_t> threadsPerBlockArgs{64,128,256,384,512,768,1024};
+    std::vector<size_t> threadsPerBlockArgs{32,64,128,256,384,512,768,1024};
     std::vector<size_t> tasksPerThreadArgs{2,4,8,16,32};
 
 
@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
         int total_tasks = deviceData.csrData.rows;
 
         for(const auto tasksPerThread: tasksPerThreadArgs){
+
             std::cout << std::endl;  
             std::cout << "Testing " << tasksPerThread << "Tasks per Thread" << std::endl;
             std::cout << std::endl;  
