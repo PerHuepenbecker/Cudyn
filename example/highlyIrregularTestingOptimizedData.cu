@@ -126,7 +126,7 @@ int main(int argc, char** argv){
                 break;
             }
 
-            initial_value += (sinf(initial_value) +1);
+            //initial_value += (sinf(initial_value) +1);
 
             // minimal work done here for each iteration
             initial_value += 0.000001f;
