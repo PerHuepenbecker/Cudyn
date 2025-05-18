@@ -40,10 +40,6 @@ int main(int argc, char** argv){
         exit(0);
     } 
 
-
-    const int THRESHOLD_BASE = 23;
-
-
     unsigned int PROBLEM_SIZE = 0;
     unsigned int tmp =  std::stoi(argv[1]);
     if(tmp == 32){
@@ -59,9 +55,8 @@ int main(int argc, char** argv){
     std::vector<size_t> tasksWorked_h(PROBLEM_SIZE);
     
     // defines the maximumm number of iterations per thread 
-    
+
     int maxValue = 1<<23;
-    double percentageOneIt = 0.95;
     std::mt19937 gen (123456);
     std::uniform_real_distribution <double> dist2 (0 , 1);
 
