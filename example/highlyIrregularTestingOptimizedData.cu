@@ -135,8 +135,8 @@ int main(int argc, char** argv){
         }
     };
 
-    std::vector<size_t> tasksPerThreadArgs{2,4,8,16,32};
-    std::vector<size_t> threadsPerBlockArgs {32,64,128,256,512,1024};
+    std::vector<size_t> tasksPerThreadArgs{2,4,8,16};
+    std::vector<size_t> threadsPerBlockArgs {32,64,128,256};
 
     
     for(const auto tasksPerThread: tasksPerThreadArgs){
