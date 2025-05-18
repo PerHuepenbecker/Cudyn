@@ -30,20 +30,42 @@ __global__ void generic_regular_kernel (size_t task_count, TaskFunctor f){
     }
 }
 
+__global__ void subtractingKernel(const float* data_vec, result* results_vec, int* tasksWorked_vec, size_t N) {
+    size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    unsigned int steps = 0;
+    float value = data_vec[i];
+    float initial_value = value;
+
+    while (true) {
+        steps++;
+
+        if (value == 1.0f) {
+            results_vec[i].baseNumber = initial_value;
+            results_vec[i].steps = steps;
+            atomicAdd(&tasksWorked_vec[blockIdx.x * blockDim.x + threadIdx.x], 1);
+            break;
+        }
+
+        //initial_value += (sinf(initial_value) +1);
+
+        initial_value += 0.000001f;
+        value--;
+    }
+}
+
+
 
 
 int main(int argc, char** argv){
     std::cout << "Starting..." << std::endl;
 
-    if(argc != 3 && (argv[1] == "--help" || argv[1] == "-h")){
-        std::cout << "Usage: <prog> <problem size as 2^x> <percentage of early finishers (0.x)>"<< std::endl;
+    if(argc != 4 || (argv[1] == "--help" || argv[1] == "-h")){
+        std::cout << "Usage: <prog> <problem size as 2^x> <blocksize> <percentage of early finishers>"<< std::endl;
         exit(0);
     } 
-
-
-    const int THRESHOLD_BASE = 23;
-
-
+    
     unsigned int PROBLEM_SIZE = 0;
     unsigned int tmp =  std::stoi(argv[1]);
     if(tmp == 32){
@@ -52,24 +74,36 @@ int main(int argc, char** argv){
         PROBLEM_SIZE = (1 << tmp);
     }
 
-    float percentageOneIt = std::stof(argv[2]);
+    size_t blocksize = std::stoi(argv[2]);
+    float percentageOneIt = std::stof(argv[3]);
+    
+    
+    //unsigned int NUM_BLOCKS = std::stoi(argv[2]);
+    //unsigned int NUM_THREADS = std::stoi(argv[3]);
+    //unsigned int REGULAR_KERNEL_BLOCKS = std::stoi(argv[4]);
+    //unsigned int REGULAR_KERNEL_THREADS = std::stoi(argv[5]);
 
-    std::vector<uint64_t> vec_h(PROBLEM_SIZE);
+    std::vector<float> vec_h(PROBLEM_SIZE);
     std::vector<result> results_h(PROBLEM_SIZE);
     std::vector<size_t> tasksWorked_h(PROBLEM_SIZE);
     
-    // defines the maximumm number of iterations per thread 
-    
     int maxValue = 1<<23;
-    double percentageOneIt = 0.95;
+    
     std::mt19937 gen (123456);
     std::uniform_real_distribution <double> dist2 (0 , 1);
 
-    for(auto &el: vec_h){
-        el = (dist2(gen) <= percentageOneIt) ? 1: maxValue;
+    for(size_t i = 0; i < vec_h.size(); i+=blocksize){
+
+        auto element = (dist2(gen) <= percentageOneIt) ? 1: maxValue;
+
+        auto blockEnd = std::min(vec_h.size(), i + blocksize);
+
+        for(size_t j = i; j < blockEnd; ++j){
+            vec_h[j] = element;
+        }        
     }
 
-    Cudyn::Utils::Memory::CudaArray<uint64_t> vec_d (vec_h);
+    Cudyn::Utils::Memory::CudaArray<float> vec_d (vec_h);
     Cudyn::Utils::Memory::CudaArray<result> results_d (results_h);
     Cudyn::Utils::Memory::CudaArray<size_t> tasksWorked_d(tasksWorked_h);
    
@@ -92,7 +126,7 @@ int main(int argc, char** argv){
                 break;
             }
 
-            //initial_value += (sinf(initial_value) +1);
+            initial_value += (sinf(initial_value) +1);
 
             // minimal work done here for each iteration
             initial_value += 0.000001f;
@@ -103,13 +137,12 @@ int main(int argc, char** argv){
 
     std::vector<size_t> tasksPerThreadArgs{2,4,8,16,32};
     std::vector<size_t> threadsPerBlockArgs {32,64,128,256,512,1024};
-    
+
     
     for(const auto tasksPerThread: tasksPerThreadArgs){
 
 
         for(const auto threadsPerBlock: threadsPerBlockArgs){
-
 
             std::fill(tasksWorked_h.begin(), tasksWorked_h.end(), 0);
             tasksWorked_d.upload(tasksWorked_h); 
@@ -159,9 +192,6 @@ std::cout << "\n";
 }
 }
 
-
-
-
 for(const auto threadsPerBlock: threadsPerBlockArgs){
 
 
@@ -173,7 +203,10 @@ for(const auto threadsPerBlock: threadsPerBlockArgs){
 
     int numBlocks = (PROBLEM_SIZE + threadsPerBlock - 1) / threadsPerBlock;
 
-    generic_regular_kernel<<<numBlocks, threadsPerBlock>>>(PROBLEM_SIZE, subtractingLogic);
+
+
+    //generic_regular_kernel<<<numBlocks, threadsPerBlock>>>(PROBLEM_SIZE, subtractingLogic);
+    subtractingKernel<<<numBlocks, threadsPerBlock>>>(data_vec, results_vec, (int*)tasksWorked_vec, vec_h.size());
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
@@ -188,6 +221,7 @@ for(const auto threadsPerBlock: threadsPerBlockArgs){
     unsigned int num_one = 0;
     unsigned int num_other = 0;
 
+    results_d.download(results_h);
     
     for (int i = 0; i < PROBLEM_SIZE; i++) {
         if(results_h[i].steps == 1){
@@ -211,6 +245,5 @@ for(const auto threadsPerBlock: threadsPerBlockArgs){
     std::cout << "Percentage of steps == 1: " << percentage_one << "%" << std::endl;
     std::cout << "Percentage of steps != 1: " << percentage_other << "%" << std::endl;
     std::cout << "----------------------" << std::endl;
-    
 
 }
