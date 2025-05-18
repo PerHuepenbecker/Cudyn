@@ -162,7 +162,7 @@ namespace Cudyn::Utils {
             }
 
             cudaMemcpy(pointer.get(), vec.data(), sizeof(T)*vec.size(), cudaMemcpyHostToDevice);
-            if(vec.size > 0) is_empty = false;
+            if(vec.size() > 0) is_empty = false;
             errorCheck();
         }
 
