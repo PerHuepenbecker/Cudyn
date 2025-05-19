@@ -48,9 +48,9 @@ __global__ void subtractingKernel(const float* data_vec, result* results_vec, in
             break;
         }
 
-        //initial_value += (sinf(initial_value) +1);
+        initial_value += (sinf(initial_value) +1);
 
-        initial_value += 0.000001f;
+        //initial_value += 0.000001f;
         value--;
     }
 }
