@@ -162,6 +162,7 @@ int main(int argc, char** argv){
     
             // Get data back to host
             tasksWorked_d.download(tasksWorked_h);
+            tasksWorked_d.clear();
 
             // Simple lamdba to count the distribution of worked tasks by the thread
              auto evaluateTaskSharing = [&tasksWorked_h, numBlocks, threadsPerBlock](){

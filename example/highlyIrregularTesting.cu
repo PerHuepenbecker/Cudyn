@@ -116,7 +116,7 @@ int main(int argc, char** argv){
             std::cout << "Dynamic T= " << tasksPerThread << " : " << threadsPerBlock << " : " << numBlocks << std::endl; 
             Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig{.total_tasks = PROBLEM_SIZE, .grid_dimensions = numBlocks, .block_dimensions = threadsPerBlock};
             Cudyn::Profiling::launchProfiled<Cudyn::Scheduler::StandardScheduler>(kernelConfig, subtractingLogic, 1);
-            Cudyn::Profiling::launchProfiled<Cudyn::Scheduler::ReducedAtomicScheduler> (kernelConfig, subtractingLogic, 1);
+           
 
             cudaDeviceSynchronize();
 
@@ -125,6 +125,9 @@ int main(int argc, char** argv){
     
             // Get data back to host
             tasksWorked_d.download(tasksWorked_h);
+
+            //rese the counter
+            tasksWorked_d.clear();
 
             // Simple lamdba to count the distribution of worked tasks by the thread
              auto evaluateTaskSharing = [&tasksWorked_h, numBlocks, threadsPerBlock](){

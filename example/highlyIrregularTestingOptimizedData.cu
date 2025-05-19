@@ -87,7 +87,7 @@ int main(int argc, char** argv){
     std::vector<result> results_h(PROBLEM_SIZE);
     std::vector<size_t> tasksWorked_h(PROBLEM_SIZE);
     
-    int maxValue = 1<<23;
+    int maxValue = 1<<24;
     
     std::mt19937 gen (123456);
     std::uniform_real_distribution <double> dist2 (0 , 1);
@@ -162,6 +162,7 @@ int main(int argc, char** argv){
     
             // Get data back to host
             tasksWorked_d.download(tasksWorked_h);
+            tasksWorked_d.clear();
 
             // Simple lamdba to count the distribution of worked tasks by the thread
              auto evaluateTaskSharing = [&tasksWorked_h, numBlocks, threadsPerBlock](){
