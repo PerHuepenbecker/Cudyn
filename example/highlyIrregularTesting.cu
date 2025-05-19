@@ -163,7 +163,7 @@ int main(int argc, char** argv){
 
                 }
 
-                std::cout << "Warps worked uniform number of tasks" << std::endl;
+                std::cout << "All threads in every warp worked uniform number of tasks" << std::endl;
                 return allWarpCountsEqual;
 
             };
