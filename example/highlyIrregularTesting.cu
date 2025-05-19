@@ -96,8 +96,8 @@ int main(int argc, char** argv){
         }
     };
 
-    std::vector<size_t> tasksPerThreadArgs{2,4,8,16,32};
-    std::vector<size_t> threadsPerBlockArgs {32,64,128,256,512,1024};
+    std::vector<size_t> tasksPerThreadArgs{2,4,8,16};
+    std::vector<size_t> threadsPerBlockArgs {32,64,128,256,512};
     
     
     for(const auto tasksPerThread: tasksPerThreadArgs){
@@ -116,6 +116,7 @@ int main(int argc, char** argv){
             std::cout << "Dynamic T= " << tasksPerThread << " : " << threadsPerBlock << " : " << numBlocks << std::endl; 
             Cudyn::Utils::GridConfiguration::KernelConfig kernelConfig{.total_tasks = PROBLEM_SIZE, .grid_dimensions = numBlocks, .block_dimensions = threadsPerBlock};
             Cudyn::Profiling::launchProfiled<Cudyn::Scheduler::StandardScheduler>(kernelConfig, subtractingLogic, 1);
+            Cudyn::Profiling::launchProfiled<Cudyn::Scheduler::ReducedAtomicScheduler> (kernelConfig, subtractingLogic, 1);
 
             cudaDeviceSynchronize();
 
@@ -140,9 +141,40 @@ int main(int argc, char** argv){
             };
 
 
-    // calling lambda
+            auto evaluateWarpSpecificTaskSharing = [&tasksWorked_h, numBlocks, threadsPerBlock](){
+                
+                //warpSize
 
+                bool allWarpCountsEqual = true;
+                for(size_t i = 0; i < numBlocks*threadsPerBlock; i+= 32){
+
+                    auto elementTocheck = tasksWorked_h.at(i);
+
+                    for(size_t j = i; j < i + 32; j++){
+                    
+                        if(tasksWorked_h.at(j) != elementTocheck){
+                            allWarpCountsEqual = false;
+                            std::cout << "Warps worked non-uniform number of tasks" << std::endl;
+                            return allWarpCountsEqual;
+                        }
+                    }
+
+                    
+
+                }
+
+                std::cout << "Warps worked uniform number of tasks" << std::endl;
+                return allWarpCountsEqual;
+
+            };
+
+
+    // calling lambdas
+
+    
     auto countedTasks = evaluateTaskSharing();
+    std::cout << "\n";
+    evaluateWarpSpecificTaskSharing();
 
     for (const auto& [tasksWorked, threadCount] : countedTasks) {
 
@@ -153,8 +185,6 @@ int main(int argc, char** argv){
 std::cout << "\n";
 }
 }
-
-
 
 
 for(const auto threadsPerBlock: threadsPerBlockArgs){
