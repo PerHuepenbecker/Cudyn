@@ -44,7 +44,7 @@ __global__ void subtractingKernel(const float* data_vec, result* results_vec, in
         if (value == 1.0f) {
             results_vec[i].baseNumber = initial_value;
             results_vec[i].steps = steps;
-            atomicAdd(&tasksWorked_vec[blockIdx.x * blockDim.x + threadIdx.x], 1);
+            tasksWorked_vec[blockIdx.x * blockDim.x + threadIdx.x] += 1;
             break;
         }
 
