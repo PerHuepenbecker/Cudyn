@@ -14,11 +14,16 @@
 
 namespace Cudyn::Utils {
 
-    void errorCheck(){
-        if (cudaGetLastError() != cudaSuccess) {
-            throw std::runtime_error("[CudaDevicePointer] Allocation failed");
-        }
+    void errorCheck(const char* context = "") {
+
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "[CUDA ERROR] " << context << " - " << cudaGetErrorString(err) << std::endl;
+        
+        std::exit(EXIT_FAILURE);
     }
+}
+
     
     namespace Memory{
             // Wrapper for safe RAII handling of memory via smart pointer inspired approach
@@ -63,7 +68,7 @@ namespace Cudyn::Utils {
                 errorCheck();
                 size = count;
                 if(zero){
-                    cudaMemset(pointer_, 0, count);
+                    cudaMemset(pointer_, 0, sizeof(T) * count);
                 }
             }
 
@@ -175,6 +180,11 @@ namespace Cudyn::Utils {
             cudaMemcpy(pointer.get(), arr.data(), sizeof(T)*N, cudaMemcpyHostToDevice);
             errorCheck();
             if(N != 0) is_empty = false;
+        }
+
+
+        void clear(){
+            cudaMemset(pointer.get(), 0, allocated_size * sizeof(T));
         }
 
         void download(std::vector<T> &vec){
