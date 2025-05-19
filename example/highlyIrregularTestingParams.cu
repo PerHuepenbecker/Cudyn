@@ -35,7 +35,7 @@ __global__ void generic_regular_kernel (size_t task_count, TaskFunctor f){
 int main(int argc, char** argv){
     std::cout << "Starting..." << std::endl;
 
-    if(argc != 3  || (argv[1] == "--help" || argv[1] == "-h")){
+    if(argc < 3  || (argv[1] == "--help" || argv[1] == "-h")){
         std::cout << "Usage: <prog> <problem size as 2^x> <percentage of early finishers (0.x)> <block sizes []>"<< std::endl;
         exit(0);
     } 
