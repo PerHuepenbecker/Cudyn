@@ -50,8 +50,8 @@ int main(int argc, char** argv){
 
     float percentageOneIt = std::stof(argv[2]);
     
-    size_t threadsPerBlock = std::stoi(3);
-    size_t tasksPerThread = std::stoi(4);
+    size_t threadsPerBlock = std::stoi(argv[3]);
+    size_t tasksPerThread = std::stoi(argv[4]);
 
 
 
@@ -162,9 +162,9 @@ std::cout << "\n";
     cudaEventCreate(&stop);
     cudaEventRecord(start);
 
-    int numBlocks = (PROBLEM_SIZE + threadsPerBlock - 1) / threadsPerBlock;
+    int numBlocks_reg = (PROBLEM_SIZE + threadsPerBlock - 1) / threadsPerBlock;
 
-    generic_regular_kernel<<<numBlocks, threadsPerBlock>>>(PROBLEM_SIZE, subtractingLogic);
+    generic_regular_kernel<<<numBlocks_reg, threadsPerBlock>>>(PROBLEM_SIZE, subtractingLogic);
 
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
