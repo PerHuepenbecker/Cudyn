@@ -2,7 +2,7 @@
 
 ## Short Description
 
-**Cudyn (CUDA Dynamic)** is a generic C++ CUDA library designed for the efficient execution of irregular applications on NVIDIA GPUs. At its core, the library features a dynamic task scheduling mechanism at the thread block level, building upon the work of Oden & Keller \cite{oden_improving_2021}.
+**Cudyn (CUDA Dynamic)** is a generic C++ CUDA library designed for the efficient execution of irregular applications on NVIDIA GPUs. At its core, the library features a dynamic task scheduling mechanism at the thread block level
 
 ## Motivation
 
@@ -34,13 +34,10 @@ The main components are:
 * **`Cudyn::CSR`** (optional): Offers data structures and kernel functors for SpMV operations.
 * **`Cudyn::MatrixMarketParser`** (optional): Enables loading of matrices.
 
-*(For a more detailed depiction of the architecture and design, please refer to the underlying scientific work [YOUR REFERENCE/PUBLICATION HERE].)*
-
 ## Prerequisites
 
 * CUDA Toolkit (Version 12.x or newer recommended)
 * A C++ compiler with support for C++17 (or newer)
-
 
 ## Installation
 
