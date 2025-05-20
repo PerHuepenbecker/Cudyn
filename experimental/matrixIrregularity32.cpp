@@ -15,7 +15,7 @@
 #include <iostream>
 #include <vector>
 #include <limits>
-#include <iomanip>  // für std::setprecision
+#include <iomanip>  
 
 template <typename T>
 void getAverageNNZSpan32(CSRMatrix<T> matrix) {
@@ -26,7 +26,7 @@ void getAverageNNZSpan32(CSRMatrix<T> matrix) {
     size_t sumMax = 0;
     size_t blockCount = 0;
 
-    // Neue Buckets: 8 Intervalle
+    
     std::vector<size_t> spanBuckets(8, 0);
 
     for (size_t i = 0; i < numRows; i += 32) {
@@ -45,7 +45,6 @@ void getAverageNNZSpan32(CSRMatrix<T> matrix) {
         sumMax += maxNNZ;
         blockCount++;
 
-        // Neue Bucketing-Logik
         if (span < 10)
             spanBuckets[0]++;
         else if (span < 50)
