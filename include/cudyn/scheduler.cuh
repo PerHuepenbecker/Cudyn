@@ -14,7 +14,7 @@ namespace Cudyn::Scheduler{
 
    
 
-    enum class KernelType{STANDARD, REDUCED_ATOMICS, BATCH};
+    enum class KernelType{STANDARD, REDUCED_ATOMICS, SUGGESTED};
 
     template <typename TaskFunctor>
     __global__ void genericIrregularKernelLowAtomics(uint64_t total_tasks, uint64_t count_blocks, TaskFunctor f){
@@ -171,7 +171,7 @@ namespace Cudyn::Scheduler{
     struct SuggestedScheduler {
         template<typename Functor>
         static void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, Functor f) {
-            genericIrregularKernelLowAtomics<<<config.grid_dimensions, config.block_dimensions>>>(
+            genericIrregularKernelSuggested<<<config.grid_dimensions, config.block_dimensions>>>(
                 config.total_tasks, config.grid_dimensions, f);
         }
     }
