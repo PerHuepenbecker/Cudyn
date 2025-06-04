@@ -174,7 +174,7 @@ namespace Cudyn::Scheduler{
             genericIrregularKernelSuggested<<<config.grid_dimensions, config.block_dimensions>>>(
                 config.total_tasks, config.grid_dimensions, f);
         }
-    }
+    };
 
 };
 
