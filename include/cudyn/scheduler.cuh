@@ -117,6 +117,40 @@ namespace Cudyn::Scheduler{
     }
 
 
+    template <typename TaskFunctor>
+    __global__ void genericIrregularKernelSuggested(uint64_t total_tasks, uint64_t count_blocks, TaskFunctor f) {
+        __shared__ uint64_t counter_shared; 
+
+        uint64_t base_tasks_per_block = total_tasks / count_blocks;
+        uint64_t remainder_tasks = total_tasks % count_blocks;
+        uint64_t tasks_for_this_block = base_tasks_per_block + (blockIdx.x < remainder_tasks);
+        uint64_t block_start_index_global = blockIdx.x * base_tasks_per_block + min((uint64_t)blockIdx.x, remainder_tasks);
+
+        if (threadIdx.x == 0) {
+            counter_shared = 0; 
+        }
+        __syncthreads();
+
+        uint64_t current_task_offset_in_block = atomicAdd((unsigned long long*)&counter_shared, 1);
+
+        while (true) {
+
+            f(block_start_index_global + current_task_offset_in_block);
+
+            uint64_t next_task_candidate_offset = atomicAdd((unsigned long long*)&counter_shared, 1);
+
+            if (next_task_candidate_offset < tasks_for_this_block) {
+
+                current_task_offset_in_block = next_task_candidate_offset;
+
+            } else {
+                break;
+            }
+        }
+    }
+
+
+
     struct StandardScheduler {
         template <typename Functor>
         static void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, Functor f) {
@@ -133,6 +167,14 @@ namespace Cudyn::Scheduler{
                 config.total_tasks, config.grid_dimensions, f);
         }
     };
+
+    struct SuggestedScheduler {
+        template<typename Functor>
+        static void launch(Cudyn::Utils::GridConfiguration::KernelConfig config, Functor f) {
+            genericIrregularKernelLowAtomics<<<config.grid_dimensions, config.block_dimensions>>>(
+                config.total_tasks, config.grid_dimensions, f);
+        }
+    }
 
 };
 
