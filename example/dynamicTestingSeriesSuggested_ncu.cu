@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
     if(argc < 2 || argc > 3){
         std::cerr << "Missing argument: filename" << std::endl;
-        std::cerr << "Usage: <program name> <filename> <grid dimensions> <block dimensions> <kernel type>" << std::endl;
+        std::cerr << "Usage: <program name> <filename> <kernel type>" << std::endl;
         std::cerr << "Exiting.." << std::endl;
         exit(1);
     };
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         if(kernelTypeStr == "--reduced-atomic"){
             return Cudyn::Scheduler::KernelType::REDUCED_ATOMICS;
         } else if(kernelTypeStr == "--suggested"){
-            
+            std::cout << "Detected suggested" << std::endl;
             return Cudyn::Scheduler::KernelType::SUGGESTED;
         }
         else return Cudyn::Scheduler::KernelType::STANDARD;
@@ -138,7 +138,15 @@ int main(int argc, char** argv) {
                             auto result = deviceData.getResult();
                             std::cout << "Result: " << result[0] << std::endl;
                             break;
-                        } default: {
+                        }
+                        case Cudyn::Scheduler::KernelType::SUGGESTED:{
+                            Cudyn::Launcher::launch<Cudyn::Scheduler::SuggestedScheduler>(config, SpMVKernel);
+                            auto result = deviceData.getResult();
+                            std::cout << "Result: " << result[0] << std::endl;
+                            break;  
+                        } 
+                        
+                        default: {
                             Cudyn::Launcher::launch<Cudyn::Scheduler::StandardScheduler>(config, SpMVKernel); 
                             auto result = deviceData.getResult();
                             std::cout << "Result: " << result[0] << std::endl;                           
