@@ -117,6 +117,7 @@ namespace Cudyn::Scheduler{
     }
 
 
+
     template <typename TaskFunctor>
     __global__ void genericIrregularKernelSuggested(uint64_t total_tasks, uint64_t count_blocks, TaskFunctor f) {
         __shared__ uint64_t counter_shared; 
@@ -133,20 +134,18 @@ namespace Cudyn::Scheduler{
 
         uint64_t current_task_offset_in_block = atomicAdd((unsigned long long*)&counter_shared, 1);
 
+        bool finished = false;
+
         while (true) {
 
-            f(block_start_index_global + current_task_offset_in_block);
+            finished = f(block_start_index_global + current_task_offset_in_block);
 
-            uint64_t next_task_candidate_offset = atomicAdd((unsigned long long*)&counter_shared, 1);
-
-            if (next_task_candidate_offset < tasks_for_this_block) {
-
-                current_task_offset_in_block = next_task_candidate_offset;
-
-            } else {
-                break;
+            if(finished){
+                uint64_t current_task_offset_in_block = atomicAdd((unsigned long long*)&counter_shared, 1);
+                if (current_task_offset_in_block >= tasks_for_this_block) {
+                    break;
+                }
             }
-        }
     }
 
 
