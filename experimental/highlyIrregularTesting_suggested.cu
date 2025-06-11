@@ -26,7 +26,10 @@ __global__ void generic_regular_kernel (size_t task_count, TaskFunctor f){
 
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if(index < task_count){
-        f(index);
+        while(true){
+            auto res = f(index);
+            if(res) break;
+        }
     }
 }
 
@@ -73,26 +76,19 @@ int main(int argc, char** argv){
     auto tasksWorked_vec = tasksWorked_d.data();
 
     auto subtractingLogic = [data_vec,results_vec, tasksWorked_vec] __device__ (size_t i){
-        unsigned int steps = 0;
-        float value = data_vec[i];
-        float initial_value = value;
-        while(true){
-            
-            steps++;
+        if(data_vec[i] == 1) {
 
-            if(value == 1){
-                results_vec[i].baseNumber = initial_value;
-                results_vec[i].steps = steps;
-                tasksWorked_vec[blockIdx.x * blockDim.x + threadIdx.x] += 1;
-                break;
-            }
+            results_vec[i].baseNumber = 0;
+            results_vec[i].steps = 0;
+            tasksWorked_vec[blockIdx.x * blockDim.x + threadIdx.x] += 1;
 
-            //initial_value += (sinf(initial_value) +1);
+            return true;
 
-            // minimal work done here for each iteration
-            initial_value += 0.000001f;
+        } else {
 
-            value--;
+            data_vec[i]-=1;
+            return false;
+
         }
     };
 

@@ -12,8 +12,6 @@
 namespace Cudyn::Scheduler{
 
 
-   
-
     enum class KernelType{STANDARD, REDUCED_ATOMICS, SUGGESTED};
 
     template <typename TaskFunctor>
@@ -141,13 +139,13 @@ namespace Cudyn::Scheduler{
             finished = f(block_start_index_global + current_task_offset_in_block);
 
             if(finished){
-                uint64_t current_task_offset_in_block = atomicAdd((unsigned long long*)&counter_shared, 1);
+                current_task_offset_in_block = atomicAdd((unsigned long long*)&counter_shared, 1);
                 if (current_task_offset_in_block >= tasks_for_this_block) {
                     break;
                 }
             }
-    }
-
+        }
+}
 
 
     struct StandardScheduler {
